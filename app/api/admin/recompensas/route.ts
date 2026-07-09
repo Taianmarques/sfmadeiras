@@ -1,15 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { z } from "zod";
 import { exigirAdmin } from "@/lib/sessao";
 import { prisma } from "@/lib/prisma";
 import { registrarAuditoria, extrairIp } from "@/lib/auditoria";
-
-const schemaCriar = z.object({
-  nome: z.string().trim().min(2),
-  pontos: z.number().int().positive(),
-  estoque: z.number().int().min(0),
-  icone: z.string().trim().min(1).max(8).default("🎁"),
-});
+import { salvarImagemProduto, ArquivoInvalidoError } from "@/lib/upload";
 
 export async function GET() {
   const { erro } = await exigirAdmin();
@@ -23,22 +16,46 @@ export async function POST(req: NextRequest) {
   const { sessao, erro } = await exigirAdmin();
   if (erro) return erro;
 
-  const corpo = await req.json().catch(() => null);
-  const validado = schemaCriar.safeParse(corpo);
-  if (!validado.success) {
-    return NextResponse.json({ erro: validado.error.errors[0].message }, { status: 400 });
+  const formData = await req.formData().catch(() => null);
+  if (!formData) return NextResponse.json({ erro: "Requisição inválida." }, { status: 400 });
+
+  const nome = String(formData.get("nome") ?? "").trim();
+  const pontos = parseInt(String(formData.get("pontos") ?? ""), 10);
+  const estoque = parseInt(String(formData.get("estoque") ?? ""), 10);
+  const icone = String(formData.get("icone") ?? "🎁").trim() || "🎁";
+  const imagem = formData.get("imagem");
+
+  if (!nome || nome.length < 2) {
+    return NextResponse.json({ erro: "Informe o nome da recompensa." }, { status: 400 });
+  }
+  if (!pontos || pontos <= 0) {
+    return NextResponse.json({ erro: "Informe a quantidade de pontos." }, { status: 400 });
+  }
+  if (isNaN(estoque) || estoque < 0) {
+    return NextResponse.json({ erro: "Informe o estoque." }, { status: 400 });
   }
 
-  const recompensa = await prisma.recompensa.create({ data: validado.data });
+  try {
+    const imagemUrl = imagem instanceof File && imagem.size > 0 ? await salvarImagemProduto(imagem) : null;
 
-  await registrarAuditoria({
-    acao: "CRIAR_RECOMPENSA",
-    entidade: "Recompensa",
-    entidadeId: recompensa.id,
-    usuarioTipo: "ADMIN",
-    adminId: sessao.user.id,
-    ip: extrairIp(req.headers),
-  });
+    const recompensa = await prisma.recompensa.create({
+      data: { nome, pontos, estoque, icone, imagemUrl },
+    });
 
-  return NextResponse.json(recompensa, { status: 201 });
+    await registrarAuditoria({
+      acao: "CRIAR_RECOMPENSA",
+      entidade: "Recompensa",
+      entidadeId: recompensa.id,
+      usuarioTipo: "ADMIN",
+      adminId: sessao.user.id,
+      ip: extrairIp(req.headers),
+    });
+
+    return NextResponse.json(recompensa, { status: 201 });
+  } catch (e) {
+    if (e instanceof ArquivoInvalidoError) {
+      return NextResponse.json({ erro: e.message }, { status: 400 });
+    }
+    throw e;
+  }
 }

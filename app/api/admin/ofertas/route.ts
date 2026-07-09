@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { exigirAdmin } from "@/lib/sessao";
 import { prisma } from "@/lib/prisma";
 import { registrarAuditoria, extrairIp } from "@/lib/auditoria";
-import { salvarImagemOferta, ArquivoInvalidoError } from "@/lib/upload";
+import { salvarImagemProduto, ArquivoInvalidoError } from "@/lib/upload";
 
 export async function GET() {
   const { erro } = await exigirAdmin();
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const imagemUrl = await salvarImagemOferta(imagem);
+    const imagemUrl = await salvarImagemProduto(imagem);
 
     const oferta = await prisma.oferta.create({
       data: {

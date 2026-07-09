@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { exigirAdmin } from "@/lib/sessao";
 import { prisma } from "@/lib/prisma";
 import { registrarAuditoria, extrairIp } from "@/lib/auditoria";
-import { salvarImagemOferta, ArquivoInvalidoError } from "@/lib/upload";
+import { salvarImagemProduto, ArquivoInvalidoError } from "@/lib/upload";
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const { sessao, erro } = await exigirAdmin();
@@ -44,7 +44,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 
   try {
-    const imagemUrl = imagem instanceof File && imagem.size > 0 ? await salvarImagemOferta(imagem) : existente.imagemUrl;
+    const imagemUrl = imagem instanceof File && imagem.size > 0 ? await salvarImagemProduto(imagem) : existente.imagemUrl;
 
     const oferta = await prisma.oferta.update({
       where: { id: params.id },

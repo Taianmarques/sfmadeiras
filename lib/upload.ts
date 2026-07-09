@@ -62,9 +62,10 @@ export async function salvarComprovante(file: File): Promise<{
   };
 }
 
-// Foto de produto usada no catálogo de ofertas (lib/pontos não entra aqui —
-// é conteúdo de marketing, não comprovante, então não fica preso a um cliente).
-export async function salvarImagemOferta(file: File): Promise<string> {
+// Foto de produto usada no catálogo de ofertas e no catálogo de recompensas —
+// é conteúdo de marketing/catálogo, não comprovante, então não fica preso a
+// um cliente (qualquer sessão autenticada pode visualizar).
+export async function salvarImagemProduto(file: File): Promise<string> {
   if (!TIPOS_IMAGEM_PERMITIDOS.has(file.type)) {
     throw new ArquivoInvalidoError("Envie uma imagem (JPG/PNG/WebP).");
   }

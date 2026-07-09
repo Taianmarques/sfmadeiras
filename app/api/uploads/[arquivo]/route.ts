@@ -14,10 +14,10 @@ const TIPO_POR_EXTENSAO: Record<string, string> = {
   ".pdf": "application/pdf",
 };
 
-// Serve dois tipos de arquivo, cada um com sua regra de autorização:
+// Serve os arquivos de upload, cada tipo com sua regra de autorização:
 // - Comprovante: só o cliente dono ou um admin (evita expor comprovante de terceiro)
-// - Oferta (foto de produto do catálogo): qualquer sessão autenticada, já que é
-//   conteúdo de marketing mostrado a todo cliente do clube
+// - Oferta / Recompensa (foto de produto de catálogo): qualquer sessão
+//   autenticada, já que é conteúdo de marketing mostrado a todo cliente do clube
 export async function GET(req: NextRequest, { params }: { params: { arquivo: string } }) {
   const sessao = await getServerSession(authOptions);
   if (!sessao) return NextResponse.json({ erro: "Não autenticado." }, { status: 401 });
@@ -33,6 +33,11 @@ export async function GET(req: NextRequest, { params }: { params: { arquivo: str
 
   const oferta = await prisma.oferta.findFirst({ where: { imagemUrl: url } });
   if (oferta) {
+    return servirArquivo(params.arquivo);
+  }
+
+  const recompensa = await prisma.recompensa.findFirst({ where: { imagemUrl: url } });
+  if (recompensa) {
     return servirArquivo(params.arquivo);
   }
 

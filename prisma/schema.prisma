@@ -179,13 +179,14 @@ model MovimentacaoPontos {
 // ---------------------------------------------------------------------------
 
 model Recompensa {
-  id       String   @id @default(cuid())
-  nome     String
-  pontos   Int
-  estoque  Int      @default(0) // use um valor alto para "ilimitado"
-  icone    String   @default("🎁")
-  ativo    Boolean  @default(true)
-  criadoEm DateTime @default(now())
+  id        String   @id @default(cuid())
+  nome      String
+  pontos    Int
+  estoque   Int      @default(0) // use um valor alto para "ilimitado"
+  icone     String   @default("🎁") // usado como fallback quando não há foto
+  imagemUrl String?
+  ativo     Boolean  @default(true)
+  criadoEm  DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
   resgates Resgate[]

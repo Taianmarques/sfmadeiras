@@ -42,6 +42,7 @@ interface Recompensa {
   pontos: number;
   estoque: number;
   icone: string;
+  imagemUrl: string | null;
 }
 
 interface Movimentacao {
@@ -241,25 +242,31 @@ export default function ClienteApp() {
         {aba === "recompensas" && (
           <>
             <SecaoTitulo icone={<Gift size={16} />} texto="Troque seus pontos" />
-            <div className="flex flex-col gap-2.5">
+            <div className="grid grid-cols-2 gap-3">
               {recompensas.map((r) => {
                 const podeResgatar = cliente.pontos >= r.pontos && r.estoque > 0;
                 return (
-                  <div key={r.id} className={`bg-white border border-bege rounded-[10px] px-4 py-3.5 flex items-center gap-3 ${r.estoque === 0 ? "opacity-50" : ""}`}>
-                    <div className="text-[26px]">{r.icone}</div>
-                    <div className="flex-1">
-                      <div className="font-semibold text-sm">{r.nome}</div>
-                      <div className="text-xs text-terracota">{formatPontos(r.pontos)} pontos</div>
+                  <div key={r.id} className={`bg-white border border-bege rounded-[10px] overflow-hidden flex flex-col ${r.estoque === 0 ? "opacity-50" : ""}`}>
+                    <div className="aspect-square bg-fundo flex items-center justify-center">
+                      {r.imagemUrl ? (
+                        <img src={r.imagemUrl} alt={r.nome} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-[40px]">{r.icone}</span>
+                      )}
                     </div>
-                    <button
-                      onClick={() => tentarResgatar(r)}
-                      disabled={r.estoque === 0}
-                      className={`rounded-md px-3 py-2 text-xs font-bold whitespace-nowrap ${
-                        podeResgatar ? "bg-ambar text-madeira" : "bg-bege text-gray-400"
-                      } ${r.estoque === 0 ? "cursor-not-allowed" : "cursor-pointer"}`}
-                    >
-                      {r.estoque === 0 ? "Esgotado" : "Resgatar"}
-                    </button>
+                    <div className="p-2.5 flex flex-col flex-1">
+                      <div className="font-semibold text-[12.5px] leading-tight mb-1">{r.nome}</div>
+                      <div className="text-xs text-terracota mb-2">{formatPontos(r.pontos)} pontos</div>
+                      <button
+                        onClick={() => tentarResgatar(r)}
+                        disabled={r.estoque === 0}
+                        className={`mt-auto rounded-md px-3 py-2 text-xs font-bold whitespace-nowrap ${
+                          podeResgatar ? "bg-ambar text-madeira" : "bg-bege text-gray-400"
+                        } ${r.estoque === 0 ? "cursor-not-allowed" : "cursor-pointer"}`}
+                      >
+                        {r.estoque === 0 ? "Esgotado" : "Resgatar"}
+                      </button>
+                    </div>
                   </div>
                 );
               })}

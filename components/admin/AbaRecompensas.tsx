@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Upload, FileImage } from "lucide-react";
 import { formatPontos } from "@/lib/formatadores";
 import type { ToastState } from "@/components/Toast";
 
@@ -11,6 +11,7 @@ interface Recompensa {
   pontos: number;
   estoque: number;
   icone: string;
+  imagemUrl: string | null;
   ativo: boolean;
 }
 
@@ -36,18 +37,26 @@ export function AbaRecompensas({ mostrarToast }: { mostrarToast: (tipo: ToastSta
         </button>
       </div>
 
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
         {recompensas.map((r) => (
           <button
             key={r.id}
             onClick={() => setEditando(r)}
-            className={`text-left bg-white border border-bege rounded-[10px] p-4 ${!r.ativo ? "opacity-50" : ""}`}
+            className={`text-left bg-white border border-bege rounded-[10px] overflow-hidden ${!r.ativo ? "opacity-50" : ""}`}
           >
-            <div className="text-[26px] mb-1.5">{r.icone}</div>
-            <div className="font-semibold text-sm mb-1">{r.nome}</div>
-            <div className="text-xs text-terracota mb-2">{formatPontos(r.pontos)} pontos</div>
-            <div className="text-xs opacity-70">
-              Estoque: {r.estoque >= 999 ? "ilimitado" : r.estoque} {!r.ativo && "· inativa"}
+            <div className="aspect-square bg-fundo flex items-center justify-center">
+              {r.imagemUrl ? (
+                <img src={r.imagemUrl} alt={r.nome} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-[40px]">{r.icone}</span>
+              )}
+            </div>
+            <div className="p-3.5">
+              <div className="font-semibold text-sm mb-1">{r.nome}</div>
+              <div className="text-xs text-terracota mb-2">{formatPontos(r.pontos)} pontos</div>
+              <div className="text-xs opacity-70">
+                Estoque: {r.estoque >= 999 ? "ilimitado" : r.estoque} {!r.ativo && "· inativa"}
+              </div>
             </div>
           </button>
         ))}
@@ -82,7 +91,17 @@ function ModalRecompensa({
   const [estoque, setEstoque] = useState(String(recompensa?.estoque ?? ""));
   const [icone, setIcone] = useState(recompensa?.icone ?? "🎁");
   const [ativo, setAtivo] = useState(recompensa?.ativo ?? true);
+  const [imagem, setImagem] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(recompensa?.imagemUrl ?? null);
   const [erro, setErro] = useState("");
+  const [salvando, setSalvando] = useState(false);
+
+  const handleImagem = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImagem(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  };
 
   const salvar = async () => {
     const p = parseInt(pontos);
@@ -92,12 +111,22 @@ function ModalRecompensa({
       return;
     }
 
+    const formData = new FormData();
+    formData.append("nome", nome);
+    formData.append("pontos", String(p));
+    formData.append("estoque", String(e));
+    formData.append("icone", icone);
+    if (recompensa) formData.append("ativo", String(ativo));
+    if (imagem) formData.append("imagem", imagem);
+
+    setSalvando(true);
     const resposta = await fetch(recompensa ? `/api/admin/recompensas/${recompensa.id}` : "/api/admin/recompensas", {
       method: recompensa ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nome, pontos: p, estoque: e, icone, ...(recompensa ? { ativo } : {}) }),
+      body: formData,
     });
     const dados = await resposta.json();
+    setSalvando(false);
+
     if (!resposta.ok) {
       setErro(dados.erro ?? "Não foi possível salvar.");
       return;
@@ -112,8 +141,8 @@ function ModalRecompensa({
   };
 
   return (
-    <div className="fixed inset-0 bg-madeira/70 flex items-center justify-center z-[100] p-5" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-xl p-5 max-w-[380px] w-full">
+    <div className="fixed inset-0 bg-madeira/70 flex items-center justify-center z-[100] p-5 overflow-y-auto" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-xl p-5 max-w-[380px] w-full my-8">
         <div className="flex justify-between items-center mb-4">
           <div className="font-bold font-oswald">{recompensa ? "Editar recompensa" : "Nova recompensa"}</div>
           <button onClick={onClose} className="text-terracota">
@@ -121,7 +150,22 @@ function ModalRecompensa({
           </button>
         </div>
 
-        <label className="block text-xs font-semibold text-terracota mb-1.5">Ícone (emoji)</label>
+        <label className="block text-xs font-semibold text-terracota mb-1.5">Foto do produto (opcional)</label>
+        <label className="flex flex-col items-center justify-center gap-1.5 border-[1.5px] border-dashed border-ambar rounded-lg py-4 px-3 mb-3.5 cursor-pointer bg-fundo overflow-hidden">
+          <input type="file" accept="image/*" onChange={handleImagem} className="hidden" />
+          {previewUrl ? (
+            <img src={previewUrl} alt="Pré-visualização" className="max-h-28 rounded-md" />
+          ) : (
+            <>
+              <Upload size={20} className="text-ambar" />
+              <span className="text-xs text-terracota flex items-center gap-1">
+                <FileImage size={13} /> Sem foto (usa o emoji abaixo)
+              </span>
+            </>
+          )}
+        </label>
+
+        <label className="block text-xs font-semibold text-terracota mb-1.5">Ícone (emoji, usado se não houver foto)</label>
         <input value={icone} onChange={(e) => setIcone(e.target.value)} className="w-full border border-bege rounded-lg px-3 py-2 text-sm mb-3.5" />
 
         <label className="block text-xs font-semibold text-terracota mb-1.5">Nome</label>
@@ -141,8 +185,8 @@ function ModalRecompensa({
 
         {erro && <div className="text-xs text-red-700 mb-3">{erro}</div>}
 
-        <button onClick={salvar} className="w-full bg-ambar text-madeira font-bold py-2.5 rounded-lg mb-2">
-          Salvar
+        <button onClick={salvar} disabled={salvando} className="w-full bg-ambar text-madeira font-bold py-2.5 rounded-lg mb-2 disabled:opacity-60">
+          {salvando ? "Salvando..." : "Salvar"}
         </button>
         {recompensa && (
           <button onClick={desativar} className="w-full border border-red-700 text-red-700 font-bold py-2.5 rounded-lg">
