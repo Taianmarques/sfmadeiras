@@ -1,0 +1,303 @@
+// ---------------------------------------------------------------------------
+// Madeireira Pinheiro — Clube de Fidelidade
+// Schema Prisma
+// ---------------------------------------------------------------------------
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Conexão via pooler do Supabase (porta 6543, pgbouncer=true) — usada em runtime.
+  url       = env("DATABASE_URL")
+  // Conexão direta (porta 5432) — usada só por `prisma migrate` / `prisma db push`,
+  // que não funcionam através do pgbouncer em modo transaction.
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// ENUMS
+// ---------------------------------------------------------------------------
+
+enum NivelFidelidade {
+  BRONZE
+  PRATA
+  OURO
+  DIAMANTE
+}
+
+enum TipoMovimentacao {
+  COMPRA // pontos ganhos por compra lançada pelo admin ou aprovada via comprovante
+  RESGATE // pontos debitados por troca de recompensa
+  BONUS_INDICACAO // pontos bônus por indicar um novo cliente
+  EXPIRACAO // baixa de pontos vencidos (lote expirado sem uso)
+  AJUSTE // ajuste manual feito por um admin (pode ser positivo ou negativo)
+}
+
+enum OrigemPontos {
+  COMPRA
+  BONUS_INDICACAO
+  AJUSTE
+}
+
+enum TipoArquivo {
+  IMAGEM
+  PDF
+}
+
+enum StatusComprovante {
+  PENDENTE
+  APROVADO
+  REJEITADO
+}
+
+enum StatusIndicacao {
+  PENDENTE
+  CONVERTIDA
+}
+
+enum TipoUsuarioAuditoria {
+  CLIENTE
+  ADMIN
+  SISTEMA
+}
+
+// ---------------------------------------------------------------------------
+// CLIENTE
+// ---------------------------------------------------------------------------
+
+model Cliente {
+  id            String   @id @default(cuid())
+  nome          String
+  cpfCnpj       String   @unique // armazenado apenas com dígitos
+  telefone      String
+  senhaHash     String
+  qrCodeToken   String   @unique @default(cuid()) // token estável usado para gerar o QR Code pessoal
+  pontos        Int      @default(0) // saldo atual de pontos disponíveis
+  totalGasto    Decimal  @default(0) @db.Decimal(12, 2) // acumulado histórico, usado para calcular o nível
+  nivel         NivelFidelidade @default(BRONZE)
+  ativo         Boolean  @default(true)
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  // Indicação: quem indicou este cliente (se veio por link de indicação)
+  indicadoPorId String?
+  indicadoPor   Cliente? @relation("IndicacoesDoCliente", fields: [indicadoPorId], references: [id])
+  indicados     Cliente[] @relation("IndicacoesDoCliente")
+
+  movimentacoes      MovimentacaoPontos[]
+  lotesPontos        PontosLote[]
+  comprovantes       Comprovante[]
+  resgates           Resgate[]
+  indicacoesEnviadas Indicacao[]          @relation("IndicacoesEnviadas")
+  indicacaoRecebida  Indicacao?           @relation("IndicacaoRecebida")
+
+  @@index([nome])
+  @@index([nivel])
+}
+
+// ---------------------------------------------------------------------------
+// ADMIN (usuário da loja)
+// ---------------------------------------------------------------------------
+
+model Admin {
+  id           String   @id @default(cuid())
+  nome         String
+  email        String   @unique
+  senhaHash    String
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  movimentacoesLancadas MovimentacaoPontos[] @relation("AdminLancou")
+  comprovantesAnalisados Comprovante[]       @relation("AdminAnalisou")
+  logsAuditoria         LogAuditoria[]
+  campanhasCriadas      Campanha[]
+}
+
+// ---------------------------------------------------------------------------
+// LOTE DE PONTOS
+// Cada crédito de pontos (compra aprovada ou bônus) gera um lote com data de
+// expiração (12 meses após a criação). Resgates consomem lotes mais antigos
+// primeiro (FIFO). Um job periódico expira lotes vencidos sem uso total.
+// ---------------------------------------------------------------------------
+
+model PontosLote {
+  id               String       @id @default(cuid())
+  clienteId        String
+  cliente          Cliente      @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  pontosOriginais  Int
+  pontosRestantes  Int
+  origem           OrigemPontos
+  movimentacaoId   String       @unique
+  movimentacao     MovimentacaoPontos @relation(fields: [movimentacaoId], references: [id])
+  dataExpiracao    DateTime
+  expirado         Boolean      @default(false)
+  criadoEm         DateTime     @default(now())
+
+  @@index([clienteId, expirado, dataExpiracao])
+}
+
+// ---------------------------------------------------------------------------
+// MOVIMENTAÇÃO DE PONTOS (extrato / histórico)
+// ---------------------------------------------------------------------------
+
+model MovimentacaoPontos {
+  id           String            @id @default(cuid())
+  clienteId    String
+  cliente      Cliente           @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  tipo         TipoMovimentacao
+  descricao    String
+  valorCompra  Decimal?          @db.Decimal(12, 2) // preenchido quando tipo = COMPRA
+  pontos       Int               // positivo para créditos, negativo para débitos
+  multiplicadorAplicado Decimal? @db.Decimal(4, 2) // nível e/ou campanha aplicados no cálculo
+
+  criadoPorAdminId String?
+  criadoPorAdmin   Admin?  @relation("AdminLancou", fields: [criadoPorAdminId], references: [id])
+
+  comprovanteId String?     @unique
+  comprovante   Comprovante? @relation(fields: [comprovanteId], references: [id])
+
+  resgateId String? @unique
+  resgate   Resgate? @relation(fields: [resgateId], references: [id])
+
+  campanhaId String?
+  campanha   Campanha? @relation(fields: [campanhaId], references: [id])
+
+  loteGerado PontosLote?
+
+  criadoEm DateTime @default(now())
+
+  @@index([clienteId, criadoEm])
+  @@index([tipo])
+}
+
+// ---------------------------------------------------------------------------
+// RECOMPENSA (catálogo)
+// ---------------------------------------------------------------------------
+
+model Recompensa {
+  id       String   @id @default(cuid())
+  nome     String
+  pontos   Int
+  estoque  Int      @default(0) // use um valor alto para "ilimitado"
+  icone    String   @default("🎁")
+  ativo    Boolean  @default(true)
+  criadoEm DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  resgates Resgate[]
+}
+
+// ---------------------------------------------------------------------------
+// RESGATE
+// ---------------------------------------------------------------------------
+
+model Resgate {
+  id            String   @id @default(cuid())
+  clienteId     String
+  cliente       Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  recompensaId  String
+  recompensa    Recompensa @relation(fields: [recompensaId], references: [id])
+  pontosGastos  Int
+  criadoEm      DateTime @default(now())
+
+  movimentacao MovimentacaoPontos?
+
+  @@index([clienteId])
+}
+
+// ---------------------------------------------------------------------------
+// COMPROVANTE (comprovante de compra enviado pelo cliente)
+// ---------------------------------------------------------------------------
+
+model Comprovante {
+  id              String            @id @default(cuid())
+  clienteId       String
+  cliente         Cliente           @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  valorInformado  Decimal           @db.Decimal(12, 2)
+  descricao       String?
+  arquivoNome     String
+  arquivoUrl      String
+  arquivoTipo     TipoArquivo
+  status          StatusComprovante @default(PENDENTE)
+  motivoRejeicao  String?
+
+  analisadoPorAdminId String?
+  analisadoPorAdmin   Admin?   @relation("AdminAnalisou", fields: [analisadoPorAdminId], references: [id])
+  analisadoEm         DateTime?
+
+  movimentacao MovimentacaoPontos?
+
+  criadoEm DateTime @default(now())
+
+  @@index([clienteId, status])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// CAMPANHA (pontos em dobro / multiplicador por período)
+// ---------------------------------------------------------------------------
+
+model Campanha {
+  id            String   @id @default(cuid())
+  nome          String
+  multiplicador Decimal  @db.Decimal(4, 2) @default(2.0)
+  dataInicio    DateTime
+  dataFim       DateTime
+  ativo         Boolean  @default(true)
+  criadoEm      DateTime @default(now())
+
+  criadoPorAdminId String?
+  criadoPorAdmin   Admin?  @relation(fields: [criadoPorAdminId], references: [id])
+
+  movimentacoes MovimentacaoPontos[]
+
+  @@index([dataInicio, dataFim, ativo])
+}
+
+// ---------------------------------------------------------------------------
+// INDICAÇÃO (programa de indique um amigo)
+// ---------------------------------------------------------------------------
+
+model Indicacao {
+  id             String          @id @default(cuid())
+  codigoUnico    String          @unique @default(cuid())
+  indicadorId    String
+  indicador      Cliente         @relation("IndicacoesEnviadas", fields: [indicadorId], references: [id], onDelete: Cascade)
+  indicadoId     String?         @unique
+  indicado       Cliente?        @relation("IndicacaoRecebida", fields: [indicadoId], references: [id])
+  status         StatusIndicacao @default(PENDENTE)
+  pontosBonus    Int             @default(100)
+  convertidaEm   DateTime?
+  criadoEm       DateTime        @default(now())
+
+  @@index([indicadorId])
+}
+
+// ---------------------------------------------------------------------------
+// LOG DE AUDITORIA
+// Registra toda ação sensível: lançamento de compra, aprovação/rejeição de
+// comprovante, resgate, login, ajuste manual etc.
+// ---------------------------------------------------------------------------
+
+model LogAuditoria {
+  id            String                @id @default(cuid())
+  acao          String                // ex: "LANCAR_COMPRA", "APROVAR_COMPROVANTE", "LOGIN_ADMIN"
+  entidade      String?               // ex: "Cliente", "Comprovante"
+  entidadeId    String?
+  usuarioTipo   TipoUsuarioAuditoria
+  usuarioId     String?
+
+  adminId String?
+  admin   Admin?  @relation(fields: [adminId], references: [id])
+
+  ip        String?
+  detalhes  Json?
+  criadoEm  DateTime @default(now())
+
+  @@index([usuarioTipo, usuarioId])
+  @@index([acao])
+  @@index([criadoEm])
+}
