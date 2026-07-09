@@ -19,11 +19,25 @@ const TIPOS_PERMITIDOS: Record<string, TipoArquivo> = {
   "application/pdf": "PDF",
 };
 
+const TIPOS_IMAGEM_PERMITIDOS = new Set(["image/jpeg", "image/png", "image/webp"]);
+
 export const TAMANHO_MAXIMO_BYTES = 8 * 1024 * 1024; // 8MB
 
 const DIRETORIO_UPLOADS = path.join(process.cwd(), "uploads");
 
 export class ArquivoInvalidoError extends Error {}
+
+async function salvarArquivoBruto(file: File, extensao: string): Promise<string> {
+  await mkdir(DIRETORIO_UPLOADS, { recursive: true });
+
+  const nomeArmazenado = `${randomUUID()}.${extensao}`;
+  const caminhoCompleto = path.join(DIRETORIO_UPLOADS, nomeArmazenado);
+
+  const buffer = Buffer.from(await file.arrayBuffer());
+  await writeFile(caminhoCompleto, buffer);
+
+  return nomeArmazenado;
+}
 
 export async function salvarComprovante(file: File): Promise<{
   arquivoNome: string;
@@ -38,20 +52,29 @@ export async function salvarComprovante(file: File): Promise<{
     throw new ArquivoInvalidoError("Arquivo maior que 8MB.");
   }
 
-  await mkdir(DIRETORIO_UPLOADS, { recursive: true });
-
   const extensao = tipo === "PDF" ? "pdf" : (file.type.split("/")[1] ?? "jpg");
-  const nomeArmazenado = `${randomUUID()}.${extensao}`;
-  const caminhoCompleto = path.join(DIRETORIO_UPLOADS, nomeArmazenado);
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(caminhoCompleto, buffer);
+  const nomeArmazenado = await salvarArquivoBruto(file, extensao);
 
   return {
     arquivoNome: file.name,
     arquivoUrl: `/api/uploads/${nomeArmazenado}`,
     arquivoTipo: tipo,
   };
+}
+
+// Foto de produto usada no catálogo de ofertas (lib/pontos não entra aqui —
+// é conteúdo de marketing, não comprovante, então não fica preso a um cliente).
+export async function salvarImagemOferta(file: File): Promise<string> {
+  if (!TIPOS_IMAGEM_PERMITIDOS.has(file.type)) {
+    throw new ArquivoInvalidoError("Envie uma imagem (JPG/PNG/WebP).");
+  }
+  if (file.size > TAMANHO_MAXIMO_BYTES) {
+    throw new ArquivoInvalidoError("Imagem maior que 8MB.");
+  }
+
+  const extensao = file.type.split("/")[1] ?? "jpg";
+  const nomeArmazenado = await salvarArquivoBruto(file, extensao);
+  return `/api/uploads/${nomeArmazenado}`;
 }
 
 export function caminhoFisico(nomeArmazenado: string): string {

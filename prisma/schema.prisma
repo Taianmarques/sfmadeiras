@@ -264,15 +264,17 @@ model Campanha {
 // ---------------------------------------------------------------------------
 
 model Oferta {
-  id         String    @id @default(cuid())
-  titulo     String
-  descricao  String
-  icone      String    @default("🏷️")
-  dataInicio DateTime?
-  dataFim    DateTime?
-  ativo      Boolean   @default(true)
-  criadoEm   DateTime  @default(now())
-  atualizadoEm DateTime @updatedAt
+  id                String    @id @default(cuid())
+  titulo            String
+  descricao         String?
+  imagemUrl         String
+  precoNormal       Decimal   @db.Decimal(12, 2)
+  precoPromocional  Decimal   @db.Decimal(12, 2)
+  dataInicio        DateTime?
+  dataFim           DateTime?
+  ativo             Boolean   @default(true)
+  criadoEm          DateTime  @default(now())
+  atualizadoEm      DateTime  @updatedAt
 
   criadoPorAdminId String?
   criadoPorAdmin   Admin?  @relation(fields: [criadoPorAdminId], references: [id])

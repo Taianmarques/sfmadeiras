@@ -17,5 +17,11 @@ export async function GET() {
     orderBy: { criadoEm: "desc" },
   });
 
-  return NextResponse.json(ofertas);
+  return NextResponse.json(
+    ofertas.map((o) => ({
+      ...o,
+      precoNormal: o.precoNormal.toNumber(),
+      precoPromocional: o.precoPromocional.toNumber(),
+    }))
+  );
 }

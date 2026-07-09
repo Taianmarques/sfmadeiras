@@ -66,8 +66,10 @@ interface Comprovante {
 interface Oferta {
   id: string;
   titulo: string;
-  descricao: string;
-  icone: string;
+  descricao: string | null;
+  imagemUrl: string;
+  precoNormal: number;
+  precoPromocional: number;
   dataInicio: string | null;
   dataFim: string | null;
 }
@@ -273,21 +275,33 @@ export default function ClienteApp() {
         {aba === "ofertas" && (
           <>
             <SecaoTitulo icone={<Tag size={16} />} texto="Ofertas exclusivas do clube" />
-            <div className="flex flex-col gap-2.5">
-              {ofertas.map((o) => (
-                <div key={o.id} className="bg-white border border-bege rounded-[10px] px-4 py-3.5 flex items-start gap-3">
-                  <div className="text-[26px] shrink-0">{o.icone}</div>
-                  <div className="flex-1">
-                    <div className="font-semibold text-sm">{o.titulo}</div>
-                    <div className="text-xs text-terracota mt-0.5">{o.descricao}</div>
-                    {o.dataFim && (
-                      <div className="text-[11px] text-gray-400 mt-1">Válida até {formatData(o.dataFim)}</div>
-                    )}
+            <div className="grid grid-cols-2 gap-3">
+              {ofertas.map((o) => {
+                const desconto = Math.round((1 - o.precoPromocional / o.precoNormal) * 100);
+                return (
+                  <div key={o.id} className="bg-white border border-bege rounded-[10px] overflow-hidden">
+                    <div className="relative aspect-square bg-fundo">
+                      <img src={o.imagemUrl} alt={o.titulo} className="w-full h-full object-cover" />
+                      {desconto > 0 && (
+                        <span className="absolute top-1.5 left-1.5 bg-terracota text-white text-[10px] font-bold rounded-full px-1.5 py-0.5">
+                          -{desconto}%
+                        </span>
+                      )}
+                    </div>
+                    <div className="p-2.5">
+                      <div className="font-semibold text-[12.5px] leading-tight mb-1">{o.titulo}</div>
+                      {o.descricao && <div className="text-[11px] text-terracota mb-1 line-clamp-2">{o.descricao}</div>}
+                      <div className="text-[11px] text-gray-400 line-through">{formatBRL(o.precoNormal)}</div>
+                      <div className="text-sm font-bold text-terracota">{formatBRL(o.precoPromocional)}</div>
+                      {o.dataFim && (
+                        <div className="text-[10px] text-gray-400 mt-1">Até {formatData(o.dataFim)}</div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {ofertas.length === 0 && (
-                <div className="text-center text-terracota py-10 text-[13px] bg-white border border-bege rounded-[10px]">
+                <div className="col-span-2 text-center text-terracota py-10 text-[13px] bg-white border border-bege rounded-[10px]">
                   Nenhuma oferta exclusiva no momento. Volte mais tarde!
                 </div>
               )}
