@@ -142,7 +142,7 @@ export default function ClienteApp() {
     <div className="min-h-screen bg-fundo font-inter">
       <header className="bg-madeira px-5 py-4 flex items-center justify-between">
         <div className="bg-fundo rounded-md px-2.5 py-1.5">
-          <Logo priority className="h-6 w-auto" />
+          <Logo priority variante="escuro" className="h-6 w-auto" />
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setModalQrAberto(true)} className="border border-terracota text-bege px-2.5 py-1.5 rounded-md text-xs flex items-center gap-1.5">

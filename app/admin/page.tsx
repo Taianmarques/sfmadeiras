@@ -25,7 +25,7 @@ export default function PainelAdmin() {
       <header className="bg-madeira px-5 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="bg-fundo rounded-md px-2.5 py-1.5">
-            <Logo priority className="h-6 w-auto" />
+            <Logo priority variante="escuro" className="h-6 w-auto" />
           </div>
           <div className="text-[11px] text-ambar tracking-widest font-oswald font-semibold">PAINEL DA LOJA</div>
         </div>
