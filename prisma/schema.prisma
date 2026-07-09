@@ -114,6 +114,7 @@ model Admin {
   comprovantesAnalisados Comprovante[]       @relation("AdminAnalisou")
   logsAuditoria         LogAuditoria[]
   campanhasCriadas      Campanha[]
+  ofertasCriadas        Oferta[]
 }
 
 // ---------------------------------------------------------------------------
@@ -255,6 +256,28 @@ model Campanha {
   movimentacoes MovimentacaoPontos[]
 
   @@index([dataInicio, dataFim, ativo])
+}
+
+// ---------------------------------------------------------------------------
+// OFERTA (vitrine de promoções exclusivas do clube, visível a todo cliente
+// logado — puramente informativa, sem cupom/resgate associado)
+// ---------------------------------------------------------------------------
+
+model Oferta {
+  id         String    @id @default(cuid())
+  titulo     String
+  descricao  String
+  icone      String    @default("🏷️")
+  dataInicio DateTime?
+  dataFim    DateTime?
+  ativo      Boolean   @default(true)
+  criadoEm   DateTime  @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  criadoPorAdminId String?
+  criadoPorAdmin   Admin?  @relation(fields: [criadoPorAdminId], references: [id])
+
+  @@index([ativo, dataInicio, dataFim])
 }
 
 // ---------------------------------------------------------------------------

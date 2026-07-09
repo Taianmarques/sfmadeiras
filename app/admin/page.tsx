@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signOut } from "next-auth/react";
-import { Hammer, LogOut, Receipt, Plus, Users, Package, BarChart3, Megaphone } from "lucide-react";
+import { Hammer, LogOut, Receipt, Plus, Users, Package, BarChart3, Megaphone, Tag } from "lucide-react";
 import { Toast } from "@/components/Toast";
 import { useToast } from "@/lib/useToast";
 import { AbaComprovantes } from "@/components/admin/AbaComprovantes";
@@ -10,9 +10,10 @@ import { AbaLancarCompra } from "@/components/admin/AbaLancarCompra";
 import { AbaClientes } from "@/components/admin/AbaClientes";
 import { AbaRecompensas } from "@/components/admin/AbaRecompensas";
 import { AbaCampanhas } from "@/components/admin/AbaCampanhas";
+import { AbaOfertas } from "@/components/admin/AbaOfertas";
 import { AbaRelatorios } from "@/components/admin/AbaRelatorios";
 
-type Aba = "comprovantes" | "lancar" | "clientes" | "recompensas" | "campanhas" | "relatorios";
+type Aba = "comprovantes" | "lancar" | "clientes" | "recompensas" | "campanhas" | "ofertas" | "relatorios";
 
 export default function PainelAdmin() {
   const [aba, setAba] = useState<Aba>("comprovantes");
@@ -45,6 +46,7 @@ export default function PainelAdmin() {
           <AbaBotao ativo={aba === "clientes"} onClick={() => setAba("clientes")} icone={<Users size={15} />} label="Clientes" />
           <AbaBotao ativo={aba === "recompensas"} onClick={() => setAba("recompensas")} icone={<Package size={15} />} label="Recompensas" />
           <AbaBotao ativo={aba === "campanhas"} onClick={() => setAba("campanhas")} icone={<Megaphone size={15} />} label="Campanhas" />
+          <AbaBotao ativo={aba === "ofertas"} onClick={() => setAba("ofertas")} icone={<Tag size={15} />} label="Ofertas" />
           <AbaBotao ativo={aba === "relatorios"} onClick={() => setAba("relatorios")} icone={<BarChart3 size={15} />} label="Relatórios" />
         </div>
 
@@ -53,6 +55,7 @@ export default function PainelAdmin() {
         {aba === "clientes" && <AbaClientes />}
         {aba === "recompensas" && <AbaRecompensas mostrarToast={mostrarToast} />}
         {aba === "campanhas" && <AbaCampanhas mostrarToast={mostrarToast} />}
+        {aba === "ofertas" && <AbaOfertas mostrarToast={mostrarToast} />}
         {aba === "relatorios" && <AbaRelatorios />}
       </div>
     </div>

@@ -15,6 +15,7 @@ import {
   FileText,
   QrCode,
   Users,
+  Tag,
 } from "lucide-react";
 import { AnelProgresso } from "@/components/AnelProgresso";
 import { Toast } from "@/components/Toast";
@@ -62,7 +63,16 @@ interface Comprovante {
   criadoEm: string;
 }
 
-type Aba = "inicio" | "recompensas" | "historico";
+interface Oferta {
+  id: string;
+  titulo: string;
+  descricao: string;
+  icone: string;
+  dataInicio: string | null;
+  dataFim: string | null;
+}
+
+type Aba = "inicio" | "recompensas" | "ofertas" | "historico";
 
 export default function ClienteApp() {
   const [aba, setAba] = useState<Aba>("inicio");
@@ -70,22 +80,25 @@ export default function ClienteApp() {
   const [recompensas, setRecompensas] = useState<Recompensa[]>([]);
   const [historico, setHistorico] = useState<Movimentacao[]>([]);
   const [comprovantes, setComprovantes] = useState<Comprovante[]>([]);
+  const [ofertas, setOfertas] = useState<Oferta[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [modalComprovanteAberto, setModalComprovanteAberto] = useState(false);
   const [modalQrAberto, setModalQrAberto] = useState(false);
   const { toast, mostrarToast } = useToast();
 
   const carregarTudo = useCallback(async () => {
-    const [meRes, recRes, histRes, compRes] = await Promise.all([
+    const [meRes, recRes, histRes, compRes, ofertasRes] = await Promise.all([
       fetch("/api/cliente/me"),
       fetch("/api/cliente/recompensas"),
       fetch("/api/cliente/historico"),
       fetch("/api/cliente/comprovantes"),
+      fetch("/api/cliente/ofertas"),
     ]);
     if (meRes.ok) setCliente(await meRes.json());
     if (recRes.ok) setRecompensas(await recRes.json());
     if (histRes.ok) setHistorico(await histRes.json());
     if (compRes.ok) setComprovantes(await compRes.json());
+    if (ofertasRes.ok) setOfertas(await ofertasRes.json());
     setCarregando(false);
   }, []);
 
@@ -257,6 +270,31 @@ export default function ClienteApp() {
           </>
         )}
 
+        {aba === "ofertas" && (
+          <>
+            <SecaoTitulo icone={<Tag size={16} />} texto="Ofertas exclusivas do clube" />
+            <div className="flex flex-col gap-2.5">
+              {ofertas.map((o) => (
+                <div key={o.id} className="bg-white border border-bege rounded-[10px] px-4 py-3.5 flex items-start gap-3">
+                  <div className="text-[26px] shrink-0">{o.icone}</div>
+                  <div className="flex-1">
+                    <div className="font-semibold text-sm">{o.titulo}</div>
+                    <div className="text-xs text-terracota mt-0.5">{o.descricao}</div>
+                    {o.dataFim && (
+                      <div className="text-[11px] text-gray-400 mt-1">Válida até {formatData(o.dataFim)}</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {ofertas.length === 0 && (
+                <div className="text-center text-terracota py-10 text-[13px] bg-white border border-bege rounded-[10px]">
+                  Nenhuma oferta exclusiva no momento. Volte mais tarde!
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
         {aba === "historico" && (
           <>
             {comprovantes.length > 0 && (
@@ -285,6 +323,7 @@ export default function ClienteApp() {
         <div className="flex gap-1.5 w-full max-w-[480px] px-4">
           <TabButton ativo={aba === "inicio"} onClick={() => setAba("inicio")} icone={<TreeDeciduous size={18} />} label="Início" />
           <TabButton ativo={aba === "recompensas"} onClick={() => setAba("recompensas")} icone={<Gift size={18} />} label="Recompensas" />
+          <TabButton ativo={aba === "ofertas"} onClick={() => setAba("ofertas")} icone={<Tag size={18} />} label="Ofertas" />
           <TabButton ativo={aba === "historico"} onClick={() => setAba("historico")} icone={<History size={18} />} label="Histórico" />
         </div>
       </nav>
