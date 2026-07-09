@@ -4,7 +4,8 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Hammer, AlertCircle, UserCircle2 } from "lucide-react";
+import { AlertCircle, UserCircle2 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 export default function LoginAdminPage() {
   const router = useRouter();
@@ -32,9 +33,10 @@ export default function LoginAdminPage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6 bg-madeira">
       <div className="flex flex-col items-center mb-8">
-        <Hammer size={40} className="text-ambar mb-2" />
-        <h1 className="font-oswald text-xl font-bold text-fundo">PAINEL DA LOJA</h1>
-        <p className="text-ambar text-xs tracking-widest mt-1">SF MADEIRAS</p>
+        <div className="bg-fundo rounded-lg px-4 py-3 mb-3">
+          <Logo priority className="h-10 w-auto" />
+        </div>
+        <p className="text-ambar text-xs tracking-widest font-oswald font-semibold">PAINEL DA LOJA</p>
       </div>
 
       <form onSubmit={entrar} className="w-full max-w-sm bg-fundo rounded-xl p-6 shadow-xl">

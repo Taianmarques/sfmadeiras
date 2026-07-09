@@ -18,6 +18,7 @@ import {
   Tag,
 } from "lucide-react";
 import { AnelProgresso } from "@/components/AnelProgresso";
+import { Logo } from "@/components/Logo";
 import { Toast } from "@/components/Toast";
 import { useToast } from "@/lib/useToast";
 import { ModalComprovante } from "@/components/cliente/ModalComprovante";
@@ -140,12 +141,8 @@ export default function ClienteApp() {
   return (
     <div className="min-h-screen bg-fundo font-inter">
       <header className="bg-madeira px-5 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <TreeDeciduous size={26} className="text-ambar" strokeWidth={2} />
-          <div>
-            <div className="font-oswald font-bold text-sm text-fundo tracking-wide">SF MADEIRAS</div>
-            <div className="text-[11px] text-ambar tracking-widest">CLUBE DE PONTOS</div>
-          </div>
+        <div className="bg-fundo rounded-md px-2.5 py-1.5">
+          <Logo priority className="h-6 w-auto" />
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setModalQrAberto(true)} className="border border-terracota text-bege px-2.5 py-1.5 rounded-md text-xs flex items-center gap-1.5">

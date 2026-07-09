@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { signOut } from "next-auth/react";
-import { Hammer, LogOut, Receipt, Plus, Users, Package, BarChart3, Megaphone, Tag } from "lucide-react";
+import { LogOut, Receipt, Plus, Users, Package, BarChart3, Megaphone, Tag } from "lucide-react";
 import { Toast } from "@/components/Toast";
+import { Logo } from "@/components/Logo";
 import { useToast } from "@/lib/useToast";
 import { AbaComprovantes } from "@/components/admin/AbaComprovantes";
 import { AbaLancarCompra } from "@/components/admin/AbaLancarCompra";
@@ -22,12 +23,11 @@ export default function PainelAdmin() {
   return (
     <div className="min-h-screen bg-fundo font-inter">
       <header className="bg-madeira px-5 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <Hammer size={24} className="text-ambar" />
-          <div>
-            <div className="font-oswald font-bold text-sm text-fundo">PAINEL DA LOJA</div>
-            <div className="text-[11px] text-ambar tracking-widest">SF MADEIRAS</div>
+        <div className="flex items-center gap-3">
+          <div className="bg-fundo rounded-md px-2.5 py-1.5">
+            <Logo priority className="h-6 w-auto" />
           </div>
+          <div className="text-[11px] text-ambar tracking-widest font-oswald font-semibold">PAINEL DA LOJA</div>
         </div>
         <button
           onClick={() => signOut({ callbackUrl: "/admin/login" })}

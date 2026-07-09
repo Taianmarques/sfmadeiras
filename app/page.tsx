@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { TreeDeciduous, ShieldCheck, UserCircle2 } from "lucide-react";
+import { ShieldCheck, UserCircle2 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 export default function HomePage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
-      <TreeDeciduous size={48} className="text-ambar mb-4" strokeWidth={2} />
-      <h1 className="font-oswald text-2xl font-bold tracking-wide">SF MADEIRAS</h1>
-      <p className="text-terracota text-sm tracking-widest mt-1 mb-10">CLUBE DE PONTOS</p>
+      <Logo priority className="h-16 w-auto mb-10" />
 
       <div className="flex flex-col gap-4 w-full max-w-xs">
         <Link

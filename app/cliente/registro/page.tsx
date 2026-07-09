@@ -4,7 +4,8 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { TreeDeciduous, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 function FormularioRegistro() {
   const router = useRouter();
@@ -92,9 +93,7 @@ export default function RegistroClientePage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
       <div className="flex flex-col items-center mb-8">
-        <TreeDeciduous size={40} className="text-ambar mb-2" />
-        <h1 className="font-oswald text-xl font-bold">SF MADEIRAS</h1>
-        <p className="text-terracota text-xs tracking-widest mt-1">CLUBE DE PONTOS</p>
+        <Logo priority className="h-12 w-auto" />
       </div>
       <Suspense fallback={null}>
         <FormularioRegistro />

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { TreeDeciduous, AlertCircle, ShieldCheck } from "lucide-react";
+import { AlertCircle, ShieldCheck } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 export default function LoginClientePage() {
   const router = useRouter();
@@ -32,9 +33,7 @@ export default function LoginClientePage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
       <div className="flex flex-col items-center mb-8">
-        <TreeDeciduous size={40} className="text-ambar mb-2" />
-        <h1 className="font-oswald text-xl font-bold">SF MADEIRAS</h1>
-        <p className="text-terracota text-xs tracking-widest mt-1">CLUBE DE PONTOS</p>
+        <Logo priority className="h-12 w-auto" />
       </div>
 
       <form onSubmit={entrar} className="w-full max-w-sm bg-white border border-bege rounded-xl p-6 shadow-sm">
