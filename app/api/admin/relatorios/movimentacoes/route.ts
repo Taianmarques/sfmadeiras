@@ -26,5 +26,5 @@ export async function GET() {
     ])
   );
 
-  return respostaCsv(csv, `movimentacoes-madeireira-pinheiro-${new Date().toISOString().slice(0, 10)}.csv`);
+  return respostaCsv(csv, `movimentacoes-sf-madeiras-${new Date().toISOString().slice(0, 10)}.csv`);
 }

@@ -7,8 +7,8 @@ const oswald = Oswald({ subsets: ["latin"], weight: ["500", "600", "700"], varia
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "Madeireira Pinheiro — Clube de Pontos",
-  description: "Clube de fidelidade da Madeireira Pinheiro",
+  title: "SF Madeiras — Clube de Pontos",
+  description: "Clube de fidelidade da SF Madeiras",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

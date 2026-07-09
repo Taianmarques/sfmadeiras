@@ -52,7 +52,7 @@ function FormularioRegistro() {
 
       {codigoIndicacao && (
         <div className="text-xs bg-bege/60 text-terracota rounded-lg px-3 py-2 mb-4">
-          Você foi indicado por um cliente Madeireira Pinheiro! 🎉
+          Você foi indicado por um cliente SF Madeiras! 🎉
         </div>
       )}
 
@@ -93,7 +93,7 @@ export default function RegistroClientePage() {
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
       <div className="flex flex-col items-center mb-8">
         <TreeDeciduous size={40} className="text-ambar mb-2" />
-        <h1 className="font-oswald text-xl font-bold">MADEIREIRA PINHEIRO</h1>
+        <h1 className="font-oswald text-xl font-bold">SF MADEIRAS</h1>
         <p className="text-terracota text-xs tracking-widest mt-1">CLUBE DE PONTOS</p>
       </div>
       <Suspense fallback={null}>

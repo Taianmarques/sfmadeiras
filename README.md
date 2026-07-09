@@ -1,6 +1,6 @@
-# Clube de Fidelidade — Madeireira Pinheiro
+# Clube de Fidelidade — SF Madeiras
 
-Sistema fullstack de clube de pontos para a Madeireira Pinheiro: cadastro e login de clientes por CPF/CNPJ, QR Code pessoal, envio e aprovação de comprovantes de compra, catálogo de recompensas, níveis de fidelidade, campanhas de pontos em dobro, indicação de amigos e painel administrativo completo para a loja.
+Sistema fullstack de clube de pontos para a SF Madeiras: cadastro e login de clientes por CPF/CNPJ, QR Code pessoal, envio e aprovação de comprovantes de compra, catálogo de recompensas, níveis de fidelidade, campanhas de pontos em dobro, indicação de amigos e painel administrativo completo para a loja.
 
 ## Stack
 
@@ -67,7 +67,7 @@ Sistema fullstack de clube de pontos para a Madeireira Pinheiro: cadastro e logi
    ```
 
    Isso cria:
-   - Um admin: `admin@madeireirapinheiro.com.br` / `admin123`
+   - Um admin: `admin@sfmadeiras.com.br` / `admin123`
    - 4 clientes de exemplo (Carlos Mendes, Ana Beatriz Souza, Marceneiro João Lima, Construtora Pinheiro), todos com senha `cliente123`
    - Catálogo de recompensas, histórico de compras, um resgate, um comprovante pendente e uma campanha de pontos em dobro ativa
 

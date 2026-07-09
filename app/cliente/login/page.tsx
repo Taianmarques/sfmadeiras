@@ -33,7 +33,7 @@ export default function LoginClientePage() {
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
       <div className="flex flex-col items-center mb-8">
         <TreeDeciduous size={40} className="text-ambar mb-2" />
-        <h1 className="font-oswald text-xl font-bold">MADEIREIRA PINHEIRO</h1>
+        <h1 className="font-oswald text-xl font-bold">SF MADEIRAS</h1>
         <p className="text-terracota text-xs tracking-widest mt-1">CLUBE DE PONTOS</p>
       </div>
 

@@ -73,7 +73,7 @@ export async function enviarMensagem(telefone: string, mensagem: string): Promis
 export function notificarComprovanteAprovado(telefone: string, nome: string, pontos: number) {
   return enviarMensagem(
     telefone,
-    `Olá, ${nome}! Seu comprovante foi aprovado e você ganhou ${pontos} pontos no Clube Madeireira Pinheiro. 🌲`
+    `Olá, ${nome}! Seu comprovante foi aprovado e você ganhou ${pontos} pontos no Clube SF Madeiras. 🌲`
   );
 }
 
@@ -87,13 +87,13 @@ export function notificarComprovanteRejeitado(telefone: string, nome: string, mo
 export function notificarResgateConfirmado(telefone: string, nome: string, recompensa: string) {
   return enviarMensagem(
     telefone,
-    `${nome}, seu resgate de "${recompensa}" foi confirmado! Retire na loja Madeireira Pinheiro.`
+    `${nome}, seu resgate de "${recompensa}" foi confirmado! Retire na loja SF Madeiras.`
   );
 }
 
 export function notificarNivelSubiu(telefone: string, nome: string, novoNivel: string) {
   return enviarMensagem(
     telefone,
-    `Parabéns, ${nome}! Você subiu para o nível ${novoNivel} no Clube Madeireira Pinheiro e agora ganha ainda mais pontos por compra. 🎉`
+    `Parabéns, ${nome}! Você subiu para o nível ${novoNivel} no Clube SF Madeiras e agora ganha ainda mais pontos por compra. 🎉`
   );
 }

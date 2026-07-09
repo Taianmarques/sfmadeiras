@@ -23,5 +23,5 @@ export async function GET() {
     ])
   );
 
-  return respostaCsv(csv, `clientes-madeireira-pinheiro-${new Date().toISOString().slice(0, 10)}.csv`);
+  return respostaCsv(csv, `clientes-sf-madeiras-${new Date().toISOString().slice(0, 10)}.csv`);
 }

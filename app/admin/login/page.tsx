@@ -34,7 +34,7 @@ export default function LoginAdminPage() {
       <div className="flex flex-col items-center mb-8">
         <Hammer size={40} className="text-ambar mb-2" />
         <h1 className="font-oswald text-xl font-bold text-fundo">PAINEL DA LOJA</h1>
-        <p className="text-ambar text-xs tracking-widest mt-1">MADEIREIRA PINHEIRO</p>
+        <p className="text-ambar text-xs tracking-widest mt-1">SF MADEIRAS</p>
       </div>
 
       <form onSubmit={entrar} className="w-full max-w-sm bg-fundo rounded-xl p-6 shadow-xl">

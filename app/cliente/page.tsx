@@ -143,7 +143,7 @@ export default function ClienteApp() {
         <div className="flex items-center gap-2.5">
           <TreeDeciduous size={26} className="text-ambar" strokeWidth={2} />
           <div>
-            <div className="font-oswald font-bold text-sm text-fundo tracking-wide">MADEIREIRA PINHEIRO</div>
+            <div className="font-oswald font-bold text-sm text-fundo tracking-wide">SF MADEIRAS</div>
             <div className="text-[11px] text-ambar tracking-widest">CLUBE DE PONTOS</div>
           </div>
         </div>

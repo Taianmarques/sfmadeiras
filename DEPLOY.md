@@ -104,7 +104,7 @@ sudo ufw enable
 
 ## 8. Testar
 
-Abra `http://SEU_IP` no navegador. Deve aparecer a home do Madeireira Pinheiro.
+Abra `http://SEU_IP` no navegador. Deve aparecer a home da SF Madeiras.
 
 ## 9. Cron de expiração de pontos
 

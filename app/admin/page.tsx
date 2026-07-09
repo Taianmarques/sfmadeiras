@@ -26,7 +26,7 @@ export default function PainelAdmin() {
           <Hammer size={24} className="text-ambar" />
           <div>
             <div className="font-oswald font-bold text-sm text-fundo">PAINEL DA LOJA</div>
-            <div className="text-[11px] text-ambar tracking-widest">MADEIREIRA PINHEIRO</div>
+            <div className="text-[11px] text-ambar tracking-widest">SF MADEIRAS</div>
           </div>
         </div>
         <button

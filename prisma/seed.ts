@@ -21,7 +21,7 @@ async function main() {
   await prisma.admin.create({
     data: {
       nome: "Administrador",
-      email: "admin@madeireirapinheiro.com.br",
+      email: "admin@sfmadeiras.com.br",
       senhaHash: await bcrypt.hash("admin123", 10),
     },
   });
@@ -129,7 +129,7 @@ async function main() {
   });
 
   console.log("Seed concluído.");
-  console.log("Login admin: admin@madeireirapinheiro.com.br / admin123");
+  console.log("Login admin: admin@sfmadeiras.com.br / admin123");
   console.log("Login clientes: CPF/CNPJ acima / senha cliente123");
 }
 
