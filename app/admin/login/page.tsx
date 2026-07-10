@@ -33,9 +33,7 @@ export default function LoginAdminPage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-6 bg-madeira">
       <div className="flex flex-col items-center mb-8">
-        <div className="bg-fundo rounded-lg px-4 py-3 mb-3">
-          <Logo priority variante="escuro" className="h-10 w-auto" />
-        </div>
+        <Logo priority variante="escuro" className="h-14 w-auto mb-3" />
         <p className="text-ambar text-xs tracking-widest font-oswald font-semibold">PAINEL DA LOJA</p>
       </div>
 
