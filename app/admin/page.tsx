@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { signOut } from "next-auth/react";
-import { LogOut, Receipt, Plus, Users, Package, BarChart3, Megaphone, Tag } from "lucide-react";
+import { LogOut, Receipt, Plus, Users, Package, BarChart3, Megaphone, Tag, KeyRound } from "lucide-react";
 import { Toast } from "@/components/Toast";
 import { Logo } from "@/components/Logo";
 import { useToast } from "@/lib/useToast";
+import { ModalAlterarSenha } from "@/components/admin/ModalAlterarSenha";
 import { AbaComprovantes } from "@/components/admin/AbaComprovantes";
 import { AbaLancarCompra } from "@/components/admin/AbaLancarCompra";
 import { AbaClientes } from "@/components/admin/AbaClientes";
@@ -18,6 +19,7 @@ type Aba = "comprovantes" | "lancar" | "clientes" | "recompensas" | "campanhas" 
 
 export default function PainelAdmin() {
   const [aba, setAba] = useState<Aba>("comprovantes");
+  const [modalSenhaAberto, setModalSenhaAberto] = useState(false);
   const { toast, mostrarToast } = useToast();
 
   return (
@@ -27,13 +29,23 @@ export default function PainelAdmin() {
           <Logo priority variante="escuro" className="h-9 w-auto" />
           <div className="text-[11px] text-ambar tracking-widest font-oswald font-semibold">PAINEL DA LOJA</div>
         </div>
-        <button
-          onClick={() => signOut({ callbackUrl: "/admin/login" })}
-          className="border border-terracota text-bege px-3 py-1.5 rounded-md text-xs flex items-center gap-1.5"
-        >
-          <LogOut size={14} /> Sair
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setModalSenhaAberto(true)}
+            className="border border-terracota text-bege px-3 py-1.5 rounded-md text-xs flex items-center gap-1.5"
+          >
+            <KeyRound size={14} /> Alterar senha
+          </button>
+          <button
+            onClick={() => signOut({ callbackUrl: "/admin/login" })}
+            className="border border-terracota text-bege px-3 py-1.5 rounded-md text-xs flex items-center gap-1.5"
+          >
+            <LogOut size={14} /> Sair
+          </button>
+        </div>
       </header>
+
+      {modalSenhaAberto && <ModalAlterarSenha onClose={() => setModalSenhaAberto(false)} mostrarToast={mostrarToast} />}
 
       <Toast toast={toast} />
 
