@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Oswald, Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -9,6 +9,10 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 export const metadata: Metadata = {
   title: "SF Madeiras — Clube de Pontos",
   description: "Clube de fidelidade da SF Madeiras",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1C1410",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
