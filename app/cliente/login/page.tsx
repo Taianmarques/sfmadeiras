@@ -34,6 +34,9 @@ export default function LoginClientePage() {
     <main className="min-h-screen flex flex-col items-center justify-center px-6">
       <div className="flex flex-col items-center mb-8">
         <Logo priority className="h-12 w-auto" />
+        <p className="text-terracota text-[13px] text-center mt-3 max-w-xs">
+          O clube de benefícios de quem vive da marcenaria.
+        </p>
       </div>
 
       <form onSubmit={entrar} className="w-full max-w-sm bg-white border border-bege rounded-xl p-6 shadow-sm">
