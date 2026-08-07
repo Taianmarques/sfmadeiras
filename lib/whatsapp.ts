@@ -97,3 +97,18 @@ export function notificarNivelSubiu(telefone: string, nome: string, novoNivel: s
     `Parabéns, ${nome}! Você subiu para o nível ${novoNivel} no Clube SF Madeiras e agora ganha ainda mais pontos por compra. 🎉`
   );
 }
+
+export function notificarResgateCashbackAprovado(telefone: string, nome: string, valor: number) {
+  const valorFormatado = valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return enviarMensagem(
+    telefone,
+    `${nome}, seu resgate de cashback de ${valorFormatado} foi aprovado! Retire na loja SF Madeiras.`
+  );
+}
+
+export function notificarResgateCashbackRejeitado(telefone: string, nome: string, motivo: string) {
+  return enviarMensagem(
+    telefone,
+    `Olá, ${nome}. Seu pedido de resgate de cashback não foi aprovado. Motivo: ${motivo}. Qualquer dúvida, fale com a loja.`
+  );
+}

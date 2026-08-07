@@ -16,6 +16,7 @@ import {
   QrCode,
   Users,
   Tag,
+  Wallet,
 } from "lucide-react";
 import { AnelProgresso } from "@/components/AnelProgresso";
 import { Logo } from "@/components/Logo";
@@ -23,16 +24,19 @@ import { Toast } from "@/components/Toast";
 import { useToast } from "@/lib/useToast";
 import { ModalComprovante } from "@/components/cliente/ModalComprovante";
 import { ModalQrCode } from "@/components/cliente/ModalQrCode";
+import { ModalSolicitarCashback } from "@/components/cliente/ModalSolicitarCashback";
 import { formatBRL, formatPontos, formatData } from "@/lib/formatadores";
 
 interface ClienteMe {
   id: string;
   nome: string;
   pontos: number;
+  saldoCashback: number;
   totalGasto: number;
   nivel: "BRONZE" | "PRATA" | "OURO" | "DIAMANTE";
   qrCodeToken: string;
   multiplicadorAtual: number;
+  taxaCashbackAtual: number;
   proximoNivel: { nivel: string; faltamReais: number } | null;
   indicacoesConvertidas: number;
 }
@@ -76,7 +80,24 @@ interface Oferta {
   dataFim: string | null;
 }
 
-type Aba = "inicio" | "recompensas" | "ofertas" | "historico";
+interface MovimentacaoCashback {
+  id: string;
+  tipo: "CREDITO_COMPRA" | "RESGATE" | "AJUSTE";
+  descricao: string;
+  valorCompra: number | null;
+  valor: number;
+  criadoEm: string;
+}
+
+interface ResgateCashbackItem {
+  id: string;
+  valor: number;
+  status: "PENDENTE" | "APROVADO" | "REJEITADO";
+  motivoRejeicao: string | null;
+  criadoEm: string;
+}
+
+type Aba = "inicio" | "recompensas" | "cashback" | "ofertas" | "historico";
 
 export default function ClienteApp() {
   const [aba, setAba] = useState<Aba>("inicio");
@@ -85,24 +106,31 @@ export default function ClienteApp() {
   const [historico, setHistorico] = useState<Movimentacao[]>([]);
   const [comprovantes, setComprovantes] = useState<Comprovante[]>([]);
   const [ofertas, setOfertas] = useState<Oferta[]>([]);
+  const [extratoCashback, setExtratoCashback] = useState<MovimentacaoCashback[]>([]);
+  const [resgatesCashback, setResgatesCashback] = useState<ResgateCashbackItem[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [modalComprovanteAberto, setModalComprovanteAberto] = useState(false);
   const [modalQrAberto, setModalQrAberto] = useState(false);
+  const [modalCashbackAberto, setModalCashbackAberto] = useState(false);
   const { toast, mostrarToast } = useToast();
 
   const carregarTudo = useCallback(async () => {
-    const [meRes, recRes, histRes, compRes, ofertasRes] = await Promise.all([
+    const [meRes, recRes, histRes, compRes, ofertasRes, cashbackRes, resgatesCashbackRes] = await Promise.all([
       fetch("/api/cliente/me"),
       fetch("/api/cliente/recompensas"),
       fetch("/api/cliente/historico"),
       fetch("/api/cliente/comprovantes"),
       fetch("/api/cliente/ofertas"),
+      fetch("/api/cliente/cashback"),
+      fetch("/api/cliente/cashback/resgates"),
     ]);
     if (meRes.ok) setCliente(await meRes.json());
     if (recRes.ok) setRecompensas(await recRes.json());
     if (histRes.ok) setHistorico(await histRes.json());
     if (compRes.ok) setComprovantes(await compRes.json());
     if (ofertasRes.ok) setOfertas(await ofertasRes.json());
+    if (cashbackRes.ok) setExtratoCashback((await cashbackRes.json()).extrato);
+    if (resgatesCashbackRes.ok) setResgatesCashback(await resgatesCashbackRes.json());
     setCarregando(false);
   }, []);
 
@@ -163,6 +191,17 @@ export default function ClienteApp() {
         />
       )}
       {modalQrAberto && <ModalQrCode token={cliente.qrCodeToken} nome={cliente.nome} onClose={() => setModalQrAberto(false)} />}
+      {modalCashbackAberto && (
+        <ModalSolicitarCashback
+          saldoDisponivel={cliente.saldoCashback}
+          onClose={() => setModalCashbackAberto(false)}
+          onSolicitado={() => {
+            setModalCashbackAberto(false);
+            mostrarToast("sucesso", "Resgate solicitado! Aguarde a aprovação da loja.");
+            carregarTudo();
+          }}
+        />
+      )}
 
       <Toast toast={toast} />
 
@@ -274,6 +313,52 @@ export default function ClienteApp() {
           </>
         )}
 
+        {aba === "cashback" && (
+          <>
+            <div className="bg-madeira rounded-[10px] px-4 py-3.5 mb-4 flex items-center gap-3">
+              <Wallet size={22} className="text-ambar" />
+              <div>
+                <div className="text-ambar text-[11px] tracking-wide">SALDO DE CASHBACK</div>
+                <div className="text-fundo text-lg font-bold font-oswald">{formatBRL(cliente.saldoCashback)}</div>
+              </div>
+            </div>
+
+            <div className="text-center text-[12.5px] text-terracota mb-4">
+              Você ganha {(cliente.taxaCashbackAtual * 100).toFixed(1)}% de cashback em cada compra aprovada, além
+              dos pontos.
+            </div>
+
+            <button
+              onClick={() => setModalCashbackAberto(true)}
+              disabled={cliente.saldoCashback <= 0}
+              className="w-full bg-ambar text-madeira font-oswald font-bold py-3 rounded-lg mb-6 disabled:opacity-50"
+            >
+              Solicitar resgate
+            </button>
+
+            {resgatesCashback.length > 0 && (
+              <>
+                <SecaoTitulo icone={<Wallet size={16} />} texto="Resgates solicitados" />
+                <div className="flex flex-col gap-2 mb-6">
+                  {resgatesCashback.map((r) => (
+                    <LinhaResgateCashback key={r.id} item={r} />
+                  ))}
+                </div>
+              </>
+            )}
+
+            <SecaoTitulo icone={<History size={16} />} texto="Extrato de cashback" />
+            <div className="flex flex-col gap-2">
+              {extratoCashback.length === 0 && (
+                <div className="text-center text-terracota py-6 text-[13px]">Nenhuma movimentação ainda.</div>
+              )}
+              {extratoCashback.map((m) => (
+                <LinhaCashback key={m.id} item={m} />
+              ))}
+            </div>
+          </>
+        )}
+
         {aba === "ofertas" && (
           <>
             <SecaoTitulo icone={<Tag size={16} />} texto="Ofertas exclusivas do clube" />
@@ -339,6 +424,7 @@ export default function ClienteApp() {
         <div className="flex gap-1.5 w-full max-w-[480px] px-4">
           <TabButton ativo={aba === "inicio"} onClick={() => setAba("inicio")} icone={<TreeDeciduous size={18} />} label="Início" />
           <TabButton ativo={aba === "recompensas"} onClick={() => setAba("recompensas")} icone={<Gift size={18} />} label="Recompensas" />
+          <TabButton ativo={aba === "cashback"} onClick={() => setAba("cashback")} icone={<Wallet size={18} />} label="Cashback" />
           <TabButton ativo={aba === "ofertas"} onClick={() => setAba("ofertas")} icone={<Tag size={18} />} label="Ofertas" />
           <TabButton ativo={aba === "historico"} onClick={() => setAba("historico")} icone={<History size={18} />} label="Histórico" />
         </div>
@@ -406,6 +492,45 @@ function LinhaComprovante({ item }: { item: Comprovante }) {
               {formatData(item.criadoEm)} · {formatBRL(item.valorInformado)}
             </div>
           </div>
+        </div>
+        <div className={`rounded-full px-2.5 py-1 text-[11px] font-bold flex items-center gap-1 whitespace-nowrap ${cfg.bg} ${cfg.cor}`}>
+          {cfg.icone} {cfg.label}
+        </div>
+      </div>
+      {item.status === "REJEITADO" && item.motivoRejeicao && (
+        <div className="text-xs text-red-700 bg-red-50 rounded-md px-2.5 py-1.5 mt-2">Motivo: {item.motivoRejeicao}</div>
+      )}
+    </div>
+  );
+}
+
+function LinhaCashback({ item }: { item: MovimentacaoCashback }) {
+  const ehDebito = item.valor < 0;
+  return (
+    <div className="bg-white border border-bege rounded-lg px-3.5 py-2.5 flex items-center justify-between">
+      <div>
+        <div className="text-[13px] font-semibold">{item.descricao}</div>
+        <div className="text-[11px] text-terracota">{formatData(item.criadoEm)}</div>
+      </div>
+      <div className="text-right">
+        <div className={`text-[13px] font-bold ${ehDebito ? "text-terracota" : "text-madeira"}`}>
+          {ehDebito ? "−" : "+"}
+          {formatBRL(Math.abs(item.valor))}
+        </div>
+        {item.valorCompra !== null && <div className="text-[11px] text-gray-400">{formatBRL(item.valorCompra)}</div>}
+      </div>
+    </div>
+  );
+}
+
+function LinhaResgateCashback({ item }: { item: ResgateCashbackItem }) {
+  const cfg = STATUS_CONFIG[item.status];
+  return (
+    <div className="bg-white border border-bege rounded-lg px-3.5 py-2.5">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-[13px] font-semibold">{formatBRL(item.valor)}</div>
+          <div className="text-[11px] text-terracota">{formatData(item.criadoEm)}</div>
         </div>
         <div className={`rounded-full px-2.5 py-1 text-[11px] font-bold flex items-center gap-1 whitespace-nowrap ${cfg.bg} ${cfg.cor}`}>
           {cfg.icone} {cfg.label}

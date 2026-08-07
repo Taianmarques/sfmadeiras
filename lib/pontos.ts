@@ -1,4 +1,4 @@
-import { Prisma, NivelFidelidade, OrigemPontos, TipoMovimentacao } from "@prisma/client";
+import { Prisma, NivelFidelidade, OrigemPontos, TipoMovimentacao, TipoMovimentacaoCashback } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 // ---------------------------------------------------------------------------
@@ -16,13 +16,14 @@ interface FaixaNivel {
   minimo: number; // total gasto mínimo (inclusive)
   maximo: number | null; // total gasto máximo (inclusive), null = sem teto
   multiplicador: number;
+  taxaCashback: number; // fração do valor da compra (ex: 0.01 = 1%)
 }
 
 export const FAIXAS_NIVEL: FaixaNivel[] = [
-  { nivel: "BRONZE", minimo: 0, maximo: 999.99, multiplicador: 1 },
-  { nivel: "PRATA", minimo: 1000, maximo: 4999.99, multiplicador: 1.2 },
-  { nivel: "OURO", minimo: 5000, maximo: 14999.99, multiplicador: 1.5 },
-  { nivel: "DIAMANTE", minimo: 15000, maximo: null, multiplicador: 2 },
+  { nivel: "BRONZE", minimo: 0, maximo: 999.99, multiplicador: 1, taxaCashback: 0.01 },
+  { nivel: "PRATA", minimo: 1000, maximo: 4999.99, multiplicador: 1.2, taxaCashback: 0.015 },
+  { nivel: "OURO", minimo: 5000, maximo: 14999.99, multiplicador: 1.5, taxaCashback: 0.02 },
+  { nivel: "DIAMANTE", minimo: 15000, maximo: null, multiplicador: 2, taxaCashback: 0.03 },
 ];
 
 export function calcularNivel(totalGasto: number): NivelFidelidade {
@@ -35,6 +36,10 @@ export function calcularNivel(totalGasto: number): NivelFidelidade {
 
 export function multiplicadorDoNivel(nivel: NivelFidelidade): number {
   return FAIXAS_NIVEL.find((f) => f.nivel === nivel)?.multiplicador ?? 1;
+}
+
+export function taxaCashbackDoNivel(nivel: NivelFidelidade): number {
+  return FAIXAS_NIVEL.find((f) => f.nivel === nivel)?.taxaCashback ?? 0.01;
 }
 
 export function proximaFaixa(totalGasto: number): FaixaNivel | null {
@@ -103,6 +108,11 @@ export async function registrarCompra(params: RegistrarCompraParams) {
     const multiplicadorTotal = multNivel * multCampanha;
     const pontosGanhos = Math.round(valor * multiplicadorTotal);
 
+    // Cashback usa a taxa do nível no momento da compra (sem multiplicador de
+    // campanha — campanhas de pontos em dobro não afetam o cashback).
+    const taxaCashback = taxaCashbackDoNivel(nivelAtual);
+    const cashbackGanho = Math.round(valor * taxaCashback * 100) / 100;
+
     const novoTotalGasto = totalGastoAtual + valor;
     const novoNivel = calcularNivel(novoTotalGasto);
 
@@ -134,16 +144,38 @@ export async function registrarCompra(params: RegistrarCompraParams) {
       },
     });
 
+    if (cashbackGanho > 0) {
+      await tx.movimentacaoCashback.create({
+        data: {
+          clienteId,
+          tipo: TipoMovimentacaoCashback.CREDITO_COMPRA,
+          descricao,
+          valorCompra: valor,
+          valor: cashbackGanho,
+          taxaAplicada: taxaCashback,
+          criadoPorAdminId,
+          comprovanteId,
+        },
+      });
+    }
+
     const clienteAtualizado = await tx.cliente.update({
       where: { id: clienteId },
       data: {
         pontos: { increment: pontosGanhos },
+        saldoCashback: { increment: cashbackGanho },
         totalGasto: novoTotalGasto,
         nivel: novoNivel,
       },
     });
 
-    return { movimentacao, cliente: clienteAtualizado, pontosGanhos, subiuDeNivel: novoNivel !== nivelAtual };
+    return {
+      movimentacao,
+      cliente: clienteAtualizado,
+      pontosGanhos,
+      cashbackGanho,
+      subiuDeNivel: novoNivel !== nivelAtual,
+    };
   }, OPCOES_TRANSACAO);
 }
 

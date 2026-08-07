@@ -63,35 +63,44 @@ enum TipoUsuarioAuditoria {
   SISTEMA
 }
 
+enum TipoMovimentacaoCashback {
+  CREDITO_COMPRA // cashback ganho por compra aprovada (junto com os pontos)
+  RESGATE // cashback debitado por resgate aprovado pelo admin
+  AJUSTE // ajuste manual feito por um admin (pode ser positivo ou negativo)
+}
+
 // ---------------------------------------------------------------------------
 // CLIENTE
 // ---------------------------------------------------------------------------
 
 model Cliente {
-  id            String   @id @default(cuid())
+  id            String          @id @default(cuid())
   nome          String
-  cpfCnpj       String   @unique // armazenado apenas com dígitos
+  cpfCnpj       String          @unique // armazenado apenas com dígitos
   telefone      String
   senhaHash     String
-  qrCodeToken   String   @unique @default(cuid()) // token estável usado para gerar o QR Code pessoal
-  pontos        Int      @default(0) // saldo atual de pontos disponíveis
-  totalGasto    Decimal  @default(0) @db.Decimal(12, 2) // acumulado histórico, usado para calcular o nível
+  qrCodeToken   String          @unique @default(cuid()) // token estável usado para gerar o QR Code pessoal
+  pontos        Int             @default(0) // saldo atual de pontos disponíveis
+  saldoCashback Decimal         @default(0) @db.Decimal(12, 2) // saldo de cashback (R$) disponível para resgate
+  totalGasto    Decimal         @default(0) @db.Decimal(12, 2) // acumulado histórico, usado para calcular o nível
   nivel         NivelFidelidade @default(BRONZE)
-  ativo         Boolean  @default(true)
-  criadoEm      DateTime @default(now())
-  atualizadoEm  DateTime @updatedAt
+  ativo         Boolean         @default(true)
+  criadoEm      DateTime        @default(now())
+  atualizadoEm  DateTime        @updatedAt
 
   // Indicação: quem indicou este cliente (se veio por link de indicação)
   indicadoPorId String?
-  indicadoPor   Cliente? @relation("IndicacoesDoCliente", fields: [indicadoPorId], references: [id])
+  indicadoPor   Cliente?  @relation("IndicacoesDoCliente", fields: [indicadoPorId], references: [id])
   indicados     Cliente[] @relation("IndicacoesDoCliente")
 
-  movimentacoes      MovimentacaoPontos[]
-  lotesPontos        PontosLote[]
-  comprovantes       Comprovante[]
-  resgates           Resgate[]
-  indicacoesEnviadas Indicacao[]          @relation("IndicacoesEnviadas")
-  indicacaoRecebida  Indicacao?           @relation("IndicacaoRecebida")
+  movimentacoes         MovimentacaoPontos[]
+  lotesPontos           PontosLote[]
+  comprovantes          Comprovante[]
+  resgates              Resgate[]
+  indicacoesEnviadas    Indicacao[]            @relation("IndicacoesEnviadas")
+  indicacaoRecebida     Indicacao?             @relation("IndicacaoRecebida")
+  movimentacoesCashback MovimentacaoCashback[]
+  resgatesCashback      ResgateCashback[]
 
   @@index([nome])
   @@index([nivel])
@@ -110,11 +119,13 @@ model Admin {
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  movimentacoesLancadas MovimentacaoPontos[] @relation("AdminLancou")
-  comprovantesAnalisados Comprovante[]       @relation("AdminAnalisou")
-  logsAuditoria         LogAuditoria[]
-  campanhasCriadas      Campanha[]
-  ofertasCriadas        Oferta[]
+  movimentacoesLancadas         MovimentacaoPontos[]   @relation("AdminLancou")
+  comprovantesAnalisados        Comprovante[]          @relation("AdminAnalisou")
+  logsAuditoria                 LogAuditoria[]
+  campanhasCriadas              Campanha[]
+  ofertasCriadas                Oferta[]
+  movimentacoesCashbackLancadas MovimentacaoCashback[] @relation("AdminLancouCashback")
+  resgatesCashbackAnalisados    ResgateCashback[]      @relation("AdminAnalisouCashback")
 }
 
 // ---------------------------------------------------------------------------
@@ -125,17 +136,17 @@ model Admin {
 // ---------------------------------------------------------------------------
 
 model PontosLote {
-  id               String       @id @default(cuid())
-  clienteId        String
-  cliente          Cliente      @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  pontosOriginais  Int
-  pontosRestantes  Int
-  origem           OrigemPontos
-  movimentacaoId   String       @unique
-  movimentacao     MovimentacaoPontos @relation(fields: [movimentacaoId], references: [id])
-  dataExpiracao    DateTime
-  expirado         Boolean      @default(false)
-  criadoEm         DateTime     @default(now())
+  id              String             @id @default(cuid())
+  clienteId       String
+  cliente         Cliente            @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  pontosOriginais Int
+  pontosRestantes Int
+  origem          OrigemPontos
+  movimentacaoId  String             @unique
+  movimentacao    MovimentacaoPontos @relation(fields: [movimentacaoId], references: [id])
+  dataExpiracao   DateTime
+  expirado        Boolean            @default(false)
+  criadoEm        DateTime           @default(now())
 
   @@index([clienteId, expirado, dataExpiracao])
 }
@@ -145,22 +156,22 @@ model PontosLote {
 // ---------------------------------------------------------------------------
 
 model MovimentacaoPontos {
-  id           String            @id @default(cuid())
-  clienteId    String
-  cliente      Cliente           @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  tipo         TipoMovimentacao
-  descricao    String
-  valorCompra  Decimal?          @db.Decimal(12, 2) // preenchido quando tipo = COMPRA
-  pontos       Int               // positivo para créditos, negativo para débitos
-  multiplicadorAplicado Decimal? @db.Decimal(4, 2) // nível e/ou campanha aplicados no cálculo
+  id                    String           @id @default(cuid())
+  clienteId             String
+  cliente               Cliente          @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  tipo                  TipoMovimentacao
+  descricao             String
+  valorCompra           Decimal?         @db.Decimal(12, 2) // preenchido quando tipo = COMPRA
+  pontos                Int // positivo para créditos, negativo para débitos
+  multiplicadorAplicado Decimal?         @db.Decimal(4, 2) // nível e/ou campanha aplicados no cálculo
 
   criadoPorAdminId String?
   criadoPorAdmin   Admin?  @relation("AdminLancou", fields: [criadoPorAdminId], references: [id])
 
-  comprovanteId String?     @unique
+  comprovanteId String?      @unique
   comprovante   Comprovante? @relation(fields: [comprovanteId], references: [id])
 
-  resgateId String? @unique
+  resgateId String?  @unique
   resgate   Resgate? @relation(fields: [resgateId], references: [id])
 
   campanhaId String?
@@ -179,14 +190,14 @@ model MovimentacaoPontos {
 // ---------------------------------------------------------------------------
 
 model Recompensa {
-  id        String   @id @default(cuid())
-  nome      String
-  pontos    Int
-  estoque   Int      @default(0) // use um valor alto para "ilimitado"
-  icone     String   @default("🎁") // usado como fallback quando não há foto
-  imagemUrl String?
-  ativo     Boolean  @default(true)
-  criadoEm  DateTime @default(now())
+  id           String   @id @default(cuid())
+  nome         String
+  pontos       Int
+  estoque      Int      @default(0) // use um valor alto para "ilimitado"
+  icone        String   @default("🎁") // usado como fallback quando não há foto
+  imagemUrl    String?
+  ativo        Boolean  @default(true)
+  criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
   resgates Resgate[]
@@ -197,13 +208,13 @@ model Recompensa {
 // ---------------------------------------------------------------------------
 
 model Resgate {
-  id            String   @id @default(cuid())
-  clienteId     String
-  cliente       Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  recompensaId  String
-  recompensa    Recompensa @relation(fields: [recompensaId], references: [id])
-  pontosGastos  Int
-  criadoEm      DateTime @default(now())
+  id           String     @id @default(cuid())
+  clienteId    String
+  cliente      Cliente    @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  recompensaId String
+  recompensa   Recompensa @relation(fields: [recompensaId], references: [id])
+  pontosGastos Int
+  criadoEm     DateTime   @default(now())
 
   movimentacao MovimentacaoPontos?
 
@@ -215,22 +226,82 @@ model Resgate {
 // ---------------------------------------------------------------------------
 
 model Comprovante {
-  id              String            @id @default(cuid())
-  clienteId       String
-  cliente         Cliente           @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  valorInformado  Decimal           @db.Decimal(12, 2)
-  descricao       String?
-  arquivoNome     String
-  arquivoUrl      String
-  arquivoTipo     TipoArquivo
-  status          StatusComprovante @default(PENDENTE)
-  motivoRejeicao  String?
+  id             String            @id @default(cuid())
+  clienteId      String
+  cliente        Cliente           @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  valorInformado Decimal           @db.Decimal(12, 2)
+  descricao      String?
+  arquivoNome    String
+  arquivoUrl     String
+  arquivoTipo    TipoArquivo
+  status         StatusComprovante @default(PENDENTE)
+  motivoRejeicao String?
 
   analisadoPorAdminId String?
-  analisadoPorAdmin   Admin?   @relation("AdminAnalisou", fields: [analisadoPorAdminId], references: [id])
+  analisadoPorAdmin   Admin?    @relation("AdminAnalisou", fields: [analisadoPorAdminId], references: [id])
   analisadoEm         DateTime?
 
-  movimentacao MovimentacaoPontos?
+  movimentacao         MovimentacaoPontos?
+  movimentacaoCashback MovimentacaoCashback?
+
+  criadoEm DateTime @default(now())
+
+  @@index([clienteId, status])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// MOVIMENTAÇÃO DE CASHBACK (extrato / histórico)
+// Toda compra aprovada credita cashback junto com os pontos (taxa por
+// nível, igual ao multiplicador de pontos). Resgates só debitam o saldo
+// depois de aprovados pelo admin (ver ResgateCashback).
+// ---------------------------------------------------------------------------
+
+model MovimentacaoCashback {
+  id           String                   @id @default(cuid())
+  clienteId    String
+  cliente      Cliente                  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  tipo         TipoMovimentacaoCashback
+  descricao    String
+  valorCompra  Decimal?                 @db.Decimal(12, 2) // preenchido quando tipo = CREDITO_COMPRA
+  valor        Decimal                  @db.Decimal(12, 2) // positivo para créditos, negativo para débitos
+  taxaAplicada Decimal?                 @db.Decimal(5, 4) // percentual do nível aplicado no cálculo
+
+  criadoPorAdminId String?
+  criadoPorAdmin   Admin?  @relation("AdminLancouCashback", fields: [criadoPorAdminId], references: [id])
+
+  comprovanteId String?      @unique
+  comprovante   Comprovante? @relation(fields: [comprovanteId], references: [id])
+
+  resgateCashbackId String?          @unique
+  resgateCashback   ResgateCashback? @relation(fields: [resgateCashbackId], references: [id])
+
+  criadoEm DateTime @default(now())
+
+  @@index([clienteId, criadoEm])
+  @@index([tipo])
+}
+
+// ---------------------------------------------------------------------------
+// RESGATE DE CASHBACK
+// Diferente do resgate de recompensa (instantâneo), o cliente solicita e um
+// admin precisa aprovar ou rejeitar antes do saldo ser debitado — mesmo
+// fluxo de status do Comprovante.
+// ---------------------------------------------------------------------------
+
+model ResgateCashback {
+  id             String            @id @default(cuid())
+  clienteId      String
+  cliente        Cliente           @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  valor          Decimal           @db.Decimal(12, 2)
+  status         StatusComprovante @default(PENDENTE)
+  motivoRejeicao String?
+
+  analisadoPorAdminId String?
+  analisadoPorAdmin   Admin?    @relation("AdminAnalisouCashback", fields: [analisadoPorAdminId], references: [id])
+  analisadoEm         DateTime?
+
+  movimentacao MovimentacaoCashback?
 
   criadoEm DateTime @default(now())
 
@@ -245,7 +316,7 @@ model Comprovante {
 model Campanha {
   id            String   @id @default(cuid())
   nome          String
-  multiplicador Decimal  @db.Decimal(4, 2) @default(2.0)
+  multiplicador Decimal  @default(2.0) @db.Decimal(4, 2)
   dataInicio    DateTime
   dataFim       DateTime
   ativo         Boolean  @default(true)
@@ -265,17 +336,17 @@ model Campanha {
 // ---------------------------------------------------------------------------
 
 model Oferta {
-  id                String    @id @default(cuid())
-  titulo            String
-  descricao         String?
-  imagemUrl         String
-  precoNormal       Decimal   @db.Decimal(12, 2)
-  precoPromocional  Decimal   @db.Decimal(12, 2)
-  dataInicio        DateTime?
-  dataFim           DateTime?
-  ativo             Boolean   @default(true)
-  criadoEm          DateTime  @default(now())
-  atualizadoEm      DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  titulo           String
+  descricao        String?
+  imagemUrl        String
+  precoNormal      Decimal   @db.Decimal(12, 2)
+  precoPromocional Decimal   @db.Decimal(12, 2)
+  dataInicio       DateTime?
+  dataFim          DateTime?
+  ativo            Boolean   @default(true)
+  criadoEm         DateTime  @default(now())
+  atualizadoEm     DateTime  @updatedAt
 
   criadoPorAdminId String?
   criadoPorAdmin   Admin?  @relation(fields: [criadoPorAdminId], references: [id])
@@ -288,16 +359,16 @@ model Oferta {
 // ---------------------------------------------------------------------------
 
 model Indicacao {
-  id             String          @id @default(cuid())
-  codigoUnico    String          @unique @default(cuid())
-  indicadorId    String
-  indicador      Cliente         @relation("IndicacoesEnviadas", fields: [indicadorId], references: [id], onDelete: Cascade)
-  indicadoId     String?         @unique
-  indicado       Cliente?        @relation("IndicacaoRecebida", fields: [indicadoId], references: [id])
-  status         StatusIndicacao @default(PENDENTE)
-  pontosBonus    Int             @default(100)
-  convertidaEm   DateTime?
-  criadoEm       DateTime        @default(now())
+  id           String          @id @default(cuid())
+  codigoUnico  String          @unique @default(cuid())
+  indicadorId  String
+  indicador    Cliente         @relation("IndicacoesEnviadas", fields: [indicadorId], references: [id], onDelete: Cascade)
+  indicadoId   String?         @unique
+  indicado     Cliente?        @relation("IndicacaoRecebida", fields: [indicadoId], references: [id])
+  status       StatusIndicacao @default(PENDENTE)
+  pontosBonus  Int             @default(100)
+  convertidaEm DateTime?
+  criadoEm     DateTime        @default(now())
 
   @@index([indicadorId])
 }
@@ -309,19 +380,19 @@ model Indicacao {
 // ---------------------------------------------------------------------------
 
 model LogAuditoria {
-  id            String                @id @default(cuid())
-  acao          String                // ex: "LANCAR_COMPRA", "APROVAR_COMPROVANTE", "LOGIN_ADMIN"
-  entidade      String?               // ex: "Cliente", "Comprovante"
-  entidadeId    String?
-  usuarioTipo   TipoUsuarioAuditoria
-  usuarioId     String?
+  id          String               @id @default(cuid())
+  acao        String // ex: "LANCAR_COMPRA", "APROVAR_COMPROVANTE", "LOGIN_ADMIN"
+  entidade    String? // ex: "Cliente", "Comprovante"
+  entidadeId  String?
+  usuarioTipo TipoUsuarioAuditoria
+  usuarioId   String?
 
   adminId String?
   admin   Admin?  @relation(fields: [adminId], references: [id])
 
-  ip        String?
-  detalhes  Json?
-  criadoEm  DateTime @default(now())
+  ip       String?
+  detalhes Json?
+  criadoEm DateTime @default(now())
 
   @@index([usuarioTipo, usuarioId])
   @@index([acao])
