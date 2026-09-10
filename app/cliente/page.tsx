@@ -25,6 +25,7 @@ import { useToast } from "@/lib/useToast";
 import { ModalComprovante } from "@/components/cliente/ModalComprovante";
 import { ModalQrCode } from "@/components/cliente/ModalQrCode";
 import { ModalSolicitarCashback } from "@/components/cliente/ModalSolicitarCashback";
+import { ModalConverterCashback } from "@/components/cliente/ModalConverterCashback";
 import { formatBRL, formatPontos, formatData } from "@/lib/formatadores";
 
 interface ClienteMe {
@@ -36,7 +37,7 @@ interface ClienteMe {
   nivel: "BRONZE" | "PRATA" | "OURO" | "DIAMANTE";
   qrCodeToken: string;
   multiplicadorAtual: number;
-  taxaCashbackAtual: number;
+  taxaConversaoCashback: number;
   proximoNivel: { nivel: string; faltamReais: number } | null;
   indicacoesConvertidas: number;
 }
@@ -82,7 +83,7 @@ interface Oferta {
 
 interface MovimentacaoCashback {
   id: string;
-  tipo: "CREDITO_COMPRA" | "RESGATE" | "AJUSTE";
+  tipo: "CREDITO_COMPRA" | "CREDITO_CONVERSAO_PONTOS" | "RESGATE" | "AJUSTE";
   descricao: string;
   valorCompra: number | null;
   valor: number;
@@ -112,6 +113,7 @@ export default function ClienteApp() {
   const [modalComprovanteAberto, setModalComprovanteAberto] = useState(false);
   const [modalQrAberto, setModalQrAberto] = useState(false);
   const [modalCashbackAberto, setModalCashbackAberto] = useState(false);
+  const [modalConverterAberto, setModalConverterAberto] = useState(false);
   const { toast, mostrarToast } = useToast();
 
   const carregarTudo = useCallback(async () => {
@@ -191,6 +193,18 @@ export default function ClienteApp() {
         />
       )}
       {modalQrAberto && <ModalQrCode token={cliente.qrCodeToken} nome={cliente.nome} onClose={() => setModalQrAberto(false)} />}
+      {modalConverterAberto && (
+        <ModalConverterCashback
+          pontosDisponiveis={cliente.pontos}
+          taxaConversao={cliente.taxaConversaoCashback}
+          onClose={() => setModalConverterAberto(false)}
+          onConvertido={(valorCashback) => {
+            setModalConverterAberto(false);
+            mostrarToast("sucesso", `Convertido em ${formatBRL(valorCashback)} de cashback!`);
+            carregarTudo();
+          }}
+        />
+      )}
       {modalCashbackAberto && (
         <ModalSolicitarCashback
           saldoDisponivel={cliente.saldoCashback}
@@ -306,6 +320,21 @@ export default function ClienteApp() {
               })}
             </div>
 
+            <div className="bg-white border border-bege rounded-[10px] px-4 py-3.5 mt-4 flex items-center gap-3">
+              <Wallet size={22} className="text-terracota shrink-0" />
+              <div className="flex-1">
+                <div className="font-semibold text-[13px]">Prefere em dinheiro?</div>
+                <div className="text-[11.5px] text-terracota">Converta seus pontos em cashback pra usar na próxima compra.</div>
+              </div>
+              <button
+                onClick={() => setModalConverterAberto(true)}
+                disabled={cliente.pontos <= 0}
+                className="bg-madeira text-fundo font-bold text-xs rounded-md px-3 py-2 whitespace-nowrap disabled:opacity-40"
+              >
+                Converter
+              </button>
+            </div>
+
             <div className="mt-8">
               <SecaoTitulo icone={<Users size={16} />} texto="Indique um amigo" />
               <IndicarAmigo />
@@ -324,17 +353,26 @@ export default function ClienteApp() {
             </div>
 
             <div className="text-center text-[12.5px] text-terracota mb-4">
-              Você ganha {(cliente.taxaCashbackAtual * 100).toFixed(1)}% de cashback em cada compra aprovada, além
-              dos pontos.
+              Converta pontos acumulados em cashback ({formatPontos(Math.round(1 / cliente.taxaConversaoCashback))}{" "}
+              pontos = R$1,00) e use como desconto na próxima compra.
             </div>
 
-            <button
-              onClick={() => setModalCashbackAberto(true)}
-              disabled={cliente.saldoCashback <= 0}
-              className="w-full bg-ambar text-madeira font-oswald font-bold py-3 rounded-lg mb-6 disabled:opacity-50"
-            >
-              Solicitar resgate
-            </button>
+            <div className="flex gap-2 mb-6">
+              <button
+                onClick={() => setModalConverterAberto(true)}
+                disabled={cliente.pontos <= 0}
+                className="flex-1 bg-madeira text-fundo font-oswald font-bold py-3 rounded-lg disabled:opacity-50"
+              >
+                Converter pontos
+              </button>
+              <button
+                onClick={() => setModalCashbackAberto(true)}
+                disabled={cliente.saldoCashback <= 0}
+                className="flex-1 bg-ambar text-madeira font-oswald font-bold py-3 rounded-lg disabled:opacity-50"
+              >
+                Solicitar resgate
+              </button>
+            </div>
 
             {resgatesCashback.length > 0 && (
               <>

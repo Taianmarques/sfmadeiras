@@ -30,6 +30,7 @@ enum NivelFidelidade {
 enum TipoMovimentacao {
   COMPRA // pontos ganhos por compra lançada pelo admin ou aprovada via comprovante
   RESGATE // pontos debitados por troca de recompensa
+  CONVERSAO_CASHBACK // pontos debitados por conversão em saldo de cashback
   BONUS_INDICACAO // pontos bônus por indicar um novo cliente
   EXPIRACAO // baixa de pontos vencidos (lote expirado sem uso)
   AJUSTE // ajuste manual feito por um admin (pode ser positivo ou negativo)
@@ -64,7 +65,8 @@ enum TipoUsuarioAuditoria {
 }
 
 enum TipoMovimentacaoCashback {
-  CREDITO_COMPRA // cashback ganho por compra aprovada (junto com os pontos)
+  CREDITO_COMPRA // (legado) cashback ganho por compra aprovada, junto com os pontos
+  CREDITO_CONVERSAO_PONTOS // cashback ganho por conversão de pontos acumulados
   RESGATE // cashback debitado por resgate aprovado pelo admin
   AJUSTE // ajuste manual feito por um admin (pode ser positivo ou negativo)
 }
@@ -252,9 +254,9 @@ model Comprovante {
 
 // ---------------------------------------------------------------------------
 // MOVIMENTAÇÃO DE CASHBACK (extrato / histórico)
-// Toda compra aprovada credita cashback junto com os pontos (taxa por
-// nível, igual ao multiplicador de pontos). Resgates só debitam o saldo
-// depois de aprovados pelo admin (ver ResgateCashback).
+// Cashback é ganho convertendo pontos acumulados (ver `converterPontosEmCashback`
+// em lib/pontos.ts), não mais automaticamente por compra. Resgates só debitam o
+// saldo depois de aprovados pelo admin (ver ResgateCashback).
 // ---------------------------------------------------------------------------
 
 model MovimentacaoCashback {

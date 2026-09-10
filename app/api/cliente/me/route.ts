@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { exigirCliente } from "@/lib/sessao";
 import { prisma } from "@/lib/prisma";
-import { multiplicadorDoNivel, proximaFaixa, taxaCashbackDoNivel } from "@/lib/pontos";
+import { multiplicadorDoNivel, proximaFaixa, TAXA_CONVERSAO_PONTOS_CASHBACK } from "@/lib/pontos";
 
 export async function GET() {
   const { sessao, erro } = await exigirCliente();
@@ -34,7 +34,7 @@ export async function GET() {
     totalGasto,
     saldoCashback: cliente.saldoCashback.toNumber(),
     multiplicadorAtual: multiplicadorDoNivel(cliente.nivel),
-    taxaCashbackAtual: taxaCashbackDoNivel(cliente.nivel),
+    taxaConversaoCashback: TAXA_CONVERSAO_PONTOS_CASHBACK,
     proximoNivel: proxima
       ? { nivel: proxima.nivel, faltamReais: Math.max(proxima.minimo - totalGasto, 0) }
       : null,

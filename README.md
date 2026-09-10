@@ -132,6 +132,7 @@ middleware.ts     → protege rotas de página e de API por papel (cliente/admin
   - Ouro: R$5.000 – R$14.999 (1.5x)
   - Diamante: R$15.000+ (2x)
 - **Expiração de pontos:** cada crédito de pontos (compra ou bônus) forma um "lote" com validade de 12 meses a partir da data em que foi ganho. Resgates consomem os lotes mais antigos primeiro (FIFO). Um lote não usado até a data de expiração é baixado automaticamente (rota `POST /api/cron/expirar-pontos`, pensada para ser chamada por um agendador externo com o header `x-cron-secret`, ou manualmente por um admin logado).
+- **Resgate — recompensa ou cashback:** ao juntar pontos, o cliente escolhe entre trocar por um item do catálogo de recompensas ou converter os pontos em saldo de cashback (100 pontos = R$1,00), usado como desconto na próxima compra. O saque do saldo de cashback precisa ser solicitado pelo cliente e aprovado por um admin antes de ser debitado.
 - **Indicação de amigo:** cada cliente tem um link único (`/cliente/registro?ref=<id>`, reutilizável para quantos amigos quiser). Ao um indicado se cadastrar por esse link, quem indicou ganha 100 pontos de bônus automaticamente.
 - **Limite de comprovantes pendentes:** um cliente não pode ter mais de 3 comprovantes aguardando análise ao mesmo tempo.
 - **Auditoria:** login (cliente/admin), lançamento de compra, aprovação/rejeição de comprovante, resgate e ajustes ficam registrados em `LogAuditoria` com usuário, IP e timestamp.
