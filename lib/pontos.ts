@@ -77,19 +77,33 @@ export async function buscarCampanhaAtiva(data: Date = new Date()) {
 // com data de expiração (12 meses).
 // ---------------------------------------------------------------------------
 
+// Lançada quando uma venda importada do relatório diário já tinha sido
+// registrada antes (mesmo `pedidoExterno`) — permite ao chamador distinguir
+// "já processado" de um erro de verdade.
+export class VendaJaImportadaError extends Error {}
+
 export interface RegistrarCompraParams {
   clienteId: string;
   valor: number;
   descricao: string;
   criadoPorAdminId?: string;
   comprovanteId?: string;
+  // Presente quando a compra vem da importação do relatório diário de vendas
+  // (.xlsx) — número do pedido no sistema da loja, usado como chave de
+  // idempotência pra nunca creditar a mesma venda duas vezes.
+  pedidoExterno?: string;
 }
 
 export async function registrarCompra(params: RegistrarCompraParams) {
-  const { clienteId, valor, descricao, criadoPorAdminId, comprovanteId } = params;
+  const { clienteId, valor, descricao, criadoPorAdminId, comprovanteId, pedidoExterno } = params;
   if (valor <= 0) throw new Error("Valor da compra deve ser maior que zero.");
 
   return prisma.$transaction(async (tx) => {
+    if (pedidoExterno) {
+      const jaImportada = await tx.vendaImportada.findUnique({ where: { pedidoExterno } });
+      if (jaImportada) throw new VendaJaImportadaError(`Pedido ${pedidoExterno} já foi importado anteriormente.`);
+    }
+
     const cliente = await tx.cliente.findUniqueOrThrow({ where: { id: clienteId } });
 
     const totalGastoAtual = toNumber(cliente.totalGasto);
@@ -145,6 +159,18 @@ export async function registrarCompra(params: RegistrarCompraParams) {
         nivel: novoNivel,
       },
     });
+
+    if (pedidoExterno) {
+      await tx.vendaImportada.create({
+        data: {
+          pedidoExterno,
+          clienteId,
+          valorVenda: valor,
+          movimentacaoId: movimentacao.id,
+          importadoPorAdminId: criadoPorAdminId,
+        },
+      });
+    }
 
     return {
       movimentacao,

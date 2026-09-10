@@ -103,6 +103,7 @@ model Cliente {
   indicacaoRecebida     Indicacao?             @relation("IndicacaoRecebida")
   movimentacoesCashback MovimentacaoCashback[]
   resgatesCashback      ResgateCashback[]
+  vendasImportadas      VendaImportada[]
 
   @@index([nome])
   @@index([nivel])
@@ -128,6 +129,7 @@ model Admin {
   ofertasCriadas                Oferta[]
   movimentacoesCashbackLancadas MovimentacaoCashback[] @relation("AdminLancouCashback")
   resgatesCashbackAnalisados    ResgateCashback[]      @relation("AdminAnalisouCashback")
+  vendasImportadas              VendaImportada[]       @relation("AdminImportouVenda")
 }
 
 // ---------------------------------------------------------------------------
@@ -181,6 +183,8 @@ model MovimentacaoPontos {
 
   loteGerado PontosLote?
 
+  vendaImportada VendaImportada?
+
   criadoEm DateTime @default(now())
 
   @@index([clienteId, criadoEm])
@@ -219,6 +223,31 @@ model Resgate {
   criadoEm     DateTime   @default(now())
 
   movimentacao MovimentacaoPontos?
+
+  @@index([clienteId])
+}
+
+// ---------------------------------------------------------------------------
+// VENDA IMPORTADA (linha do relatório diário de vendas, .xlsx, lançada em lote
+// pelo admin). `pedidoExterno` é o número do pedido no sistema de vendas da
+// loja — único, garante que a mesma venda nunca gera pontos duas vezes mesmo
+// que o relatório seja reenviado ou reprocessado.
+// ---------------------------------------------------------------------------
+
+model VendaImportada {
+  id            String   @id @default(cuid())
+  pedidoExterno String   @unique
+  clienteId     String
+  cliente       Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  valorVenda    Decimal  @db.Decimal(12, 2)
+
+  movimentacaoId String             @unique
+  movimentacao   MovimentacaoPontos @relation(fields: [movimentacaoId], references: [id])
+
+  importadoPorAdminId String?
+  importadoPorAdmin   Admin?  @relation("AdminImportouVenda", fields: [importadoPorAdminId], references: [id])
+
+  criadoEm DateTime @default(now())
 
   @@index([clienteId])
 }

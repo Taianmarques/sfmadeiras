@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signOut } from "next-auth/react";
-import { LogOut, Receipt, Plus, Users, Package, BarChart3, Megaphone, Tag, KeyRound, Wallet } from "lucide-react";
+import { LogOut, Receipt, Plus, Users, Package, BarChart3, Megaphone, Tag, KeyRound, Wallet, FileSpreadsheet } from "lucide-react";
 import { Toast } from "@/components/Toast";
 import { Logo } from "@/components/Logo";
 import { useToast } from "@/lib/useToast";
@@ -15,8 +15,18 @@ import { AbaCampanhas } from "@/components/admin/AbaCampanhas";
 import { AbaOfertas } from "@/components/admin/AbaOfertas";
 import { AbaRelatorios } from "@/components/admin/AbaRelatorios";
 import { AbaCashback } from "@/components/admin/AbaCashback";
+import { AbaImportarVendas } from "@/components/admin/AbaImportarVendas";
 
-type Aba = "comprovantes" | "lancar" | "clientes" | "recompensas" | "cashback" | "campanhas" | "ofertas" | "relatorios";
+type Aba =
+  | "comprovantes"
+  | "lancar"
+  | "importar-vendas"
+  | "clientes"
+  | "recompensas"
+  | "cashback"
+  | "campanhas"
+  | "ofertas"
+  | "relatorios";
 
 export default function PainelAdmin() {
   const [aba, setAba] = useState<Aba>("comprovantes");
@@ -54,6 +64,7 @@ export default function PainelAdmin() {
         <div className="flex gap-1 mb-5 border-b border-bege overflow-x-auto">
           <AbaBotao ativo={aba === "comprovantes"} onClick={() => setAba("comprovantes")} icone={<Receipt size={15} />} label="Comprovantes" />
           <AbaBotao ativo={aba === "lancar"} onClick={() => setAba("lancar")} icone={<Plus size={15} />} label="Lançar compra" />
+          <AbaBotao ativo={aba === "importar-vendas"} onClick={() => setAba("importar-vendas")} icone={<FileSpreadsheet size={15} />} label="Importar vendas" />
           <AbaBotao ativo={aba === "clientes"} onClick={() => setAba("clientes")} icone={<Users size={15} />} label="Clientes" />
           <AbaBotao ativo={aba === "recompensas"} onClick={() => setAba("recompensas")} icone={<Package size={15} />} label="Recompensas" />
           <AbaBotao ativo={aba === "cashback"} onClick={() => setAba("cashback")} icone={<Wallet size={15} />} label="Cashback" />
@@ -64,6 +75,7 @@ export default function PainelAdmin() {
 
         {aba === "comprovantes" && <AbaComprovantes mostrarToast={mostrarToast} />}
         {aba === "lancar" && <AbaLancarCompra mostrarToast={mostrarToast} />}
+        {aba === "importar-vendas" && <AbaImportarVendas mostrarToast={mostrarToast} />}
         {aba === "clientes" && <AbaClientes />}
         {aba === "recompensas" && <AbaRecompensas mostrarToast={mostrarToast} />}
         {aba === "cashback" && <AbaCashback mostrarToast={mostrarToast} />}
