@@ -4,7 +4,7 @@
 // Nada aqui dispara mensagens de verdade enquanto WHATSAPP_PROVIDER,
 // WHATSAPP_API_URL e WHATSAPP_API_KEY não estiverem configurados no .env —
 // as funções apenas fazem log e retornam `{ enviado: false }`. Isso permite
-// que todo o resto do sistema (aprovação de comprovante, resgate, etc.) já
+// que todo o resto do sistema (resgate, importação de vendas, etc.) já
 // chame `notificarX(...)` hoje, e a integração real seja plugada depois só
 // implementando `enviarMensagem` abaixo.
 // ---------------------------------------------------------------------------
@@ -68,20 +68,6 @@ export async function enviarMensagem(telefone: string, mensagem: string): Promis
     console.error("[whatsapp] Falha ao enviar mensagem:", erro);
     return { enviado: false, motivo: "Erro de rede ao chamar o provedor." };
   }
-}
-
-export function notificarComprovanteAprovado(telefone: string, nome: string, pontos: number) {
-  return enviarMensagem(
-    telefone,
-    `Olá, ${nome}! Seu comprovante foi aprovado e você ganhou ${pontos} pontos no Clube SF Madeiras. 🌲`
-  );
-}
-
-export function notificarComprovanteRejeitado(telefone: string, nome: string, motivo: string) {
-  return enviarMensagem(
-    telefone,
-    `Olá, ${nome}. Seu comprovante enviado não foi aprovado. Motivo: ${motivo}. Qualquer dúvida, fale com a loja.`
-  );
 }
 
 export function notificarResgateConfirmado(telefone: string, nome: string, recompensa: string) {

@@ -12,8 +12,8 @@ export interface RegistrarAuditoriaParams {
   detalhes?: Record<string, unknown>;
 }
 
-// Toda ação sensível (lançamento de compra, aprovação/rejeição de
-// comprovante, resgate, login, ajuste manual) deve chamar esta função.
+// Toda ação sensível (importação de vendas, resgate, entrega/cancelamento de
+// resgate, login, ajuste manual) deve chamar esta função.
 export async function registrarAuditoria(params: RegistrarAuditoriaParams) {
   const { acao, entidade, entidadeId, usuarioTipo, usuarioId, adminId, ip, detalhes } = params;
   await prisma.logAuditoria.create({

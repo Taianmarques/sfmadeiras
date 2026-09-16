@@ -7,12 +7,9 @@ import {
   Gift,
   History,
   LogOut,
-  Upload,
   Clock,
   Check,
   X,
-  FileImage,
-  FileText,
   QrCode,
   Users,
   Tag,
@@ -22,7 +19,6 @@ import { AnelProgresso } from "@/components/AnelProgresso";
 import { Logo } from "@/components/Logo";
 import { Toast } from "@/components/Toast";
 import { useToast } from "@/lib/useToast";
-import { ModalComprovante } from "@/components/cliente/ModalComprovante";
 import { ModalQrCode } from "@/components/cliente/ModalQrCode";
 import { ModalSolicitarCashback } from "@/components/cliente/ModalSolicitarCashback";
 import { ModalConverterCashback } from "@/components/cliente/ModalConverterCashback";
@@ -57,16 +53,6 @@ interface Movimentacao {
   descricao: string;
   valorCompra: number | null;
   pontos: number;
-  criadoEm: string;
-}
-
-interface Comprovante {
-  id: string;
-  valorInformado: number;
-  descricao: string | null;
-  arquivoTipo: "IMAGEM" | "PDF";
-  status: "PENDENTE" | "APROVADO" | "REJEITADO";
-  motivoRejeicao: string | null;
   criadoEm: string;
 }
 
@@ -114,24 +100,21 @@ export default function ClienteApp() {
   const [cliente, setCliente] = useState<ClienteMe | null>(null);
   const [recompensas, setRecompensas] = useState<Recompensa[]>([]);
   const [historico, setHistorico] = useState<Movimentacao[]>([]);
-  const [comprovantes, setComprovantes] = useState<Comprovante[]>([]);
   const [ofertas, setOfertas] = useState<Oferta[]>([]);
   const [extratoCashback, setExtratoCashback] = useState<MovimentacaoCashback[]>([]);
   const [resgatesCashback, setResgatesCashback] = useState<ResgateCashbackItem[]>([]);
   const [resgatesRecompensa, setResgatesRecompensa] = useState<ResgateRecompensaItem[]>([]);
   const [carregando, setCarregando] = useState(true);
-  const [modalComprovanteAberto, setModalComprovanteAberto] = useState(false);
   const [modalQrAberto, setModalQrAberto] = useState(false);
   const [modalCashbackAberto, setModalCashbackAberto] = useState(false);
   const [modalConverterAberto, setModalConverterAberto] = useState(false);
   const { toast, mostrarToast } = useToast();
 
   const carregarTudo = useCallback(async () => {
-    const [meRes, recRes, histRes, compRes, ofertasRes, cashbackRes, resgatesCashbackRes, resgatesRes] = await Promise.all([
+    const [meRes, recRes, histRes, ofertasRes, cashbackRes, resgatesCashbackRes, resgatesRes] = await Promise.all([
       fetch("/api/cliente/me"),
       fetch("/api/cliente/recompensas"),
       fetch("/api/cliente/historico"),
-      fetch("/api/cliente/comprovantes"),
       fetch("/api/cliente/ofertas"),
       fetch("/api/cliente/cashback"),
       fetch("/api/cliente/cashback/resgates"),
@@ -140,7 +123,6 @@ export default function ClienteApp() {
     if (meRes.ok) setCliente(await meRes.json());
     if (recRes.ok) setRecompensas(await recRes.json());
     if (histRes.ok) setHistorico(await histRes.json());
-    if (compRes.ok) setComprovantes(await compRes.json());
     if (ofertasRes.ok) setOfertas(await ofertasRes.json());
     if (cashbackRes.ok) setExtratoCashback((await cashbackRes.json()).extrato);
     if (resgatesCashbackRes.ok) setResgatesCashback(await resgatesCashbackRes.json());
@@ -158,8 +140,6 @@ export default function ClienteApp() {
 
   const proximaRecompensa = [...recompensas].filter((r) => r.pontos > cliente.pontos).sort((a, b) => a.pontos - b.pontos)[0]
     ?? [...recompensas].sort((a, b) => b.pontos - a.pontos)[0];
-
-  const comprovantesPendentes = comprovantes.filter((c) => c.status === "PENDENTE");
 
   const tentarResgatar = async (recompensa: Recompensa) => {
     if (cliente.pontos < recompensa.pontos) {
@@ -194,16 +174,6 @@ export default function ClienteApp() {
         </div>
       </header>
 
-      {modalComprovanteAberto && (
-        <ModalComprovante
-          onClose={() => setModalComprovanteAberto(false)}
-          onEnviado={() => {
-            setModalComprovanteAberto(false);
-            mostrarToast("sucesso", "Comprovante enviado! Aguarde a aprovação da loja.");
-            carregarTudo();
-          }}
-        />
-      )}
       {modalQrAberto && <ModalQrCode token={cliente.qrCodeToken} nome={cliente.nome} onClose={() => setModalQrAberto(false)} />}
       {modalConverterAberto && (
         <ModalConverterCashback
@@ -270,24 +240,6 @@ export default function ClienteApp() {
                 <div className="text-fundo text-lg font-bold font-oswald">{cliente.multiplicadorAtual}x</div>
               </div>
             </div>
-
-            <button
-              onClick={() => setModalComprovanteAberto(true)}
-              className="w-full bg-white border-[1.5px] border-dashed border-ambar rounded-[10px] py-3.5 px-4 flex items-center justify-center gap-2 font-bold text-[13px] mb-4"
-            >
-              <Upload size={16} className="text-ambar" />
-              Enviar comprovante de compra
-            </button>
-
-            {comprovantesPendentes.length > 0 && (
-              <div className="bg-[#FBF3DD] border border-ambar rounded-[10px] px-4 py-3 mb-5 flex items-center gap-2.5">
-                <Clock size={18} className="text-terracota" />
-                <div className="text-xs text-terracota">
-                  Você tem <strong>{comprovantesPendentes.length}</strong> comprovante{comprovantesPendentes.length > 1 ? "s" : ""} em
-                  análise pela loja.
-                </div>
-              </div>
-            )}
 
             <SecaoTitulo icone={<History size={16} />} texto="Últimas movimentações" />
             <div className="flex flex-col gap-2">
@@ -459,17 +411,6 @@ export default function ClienteApp() {
 
         {aba === "historico" && (
           <>
-            {comprovantes.length > 0 && (
-              <>
-                <SecaoTitulo icone={<FileText size={16} />} texto="Comprovantes enviados" />
-                <div className="flex flex-col gap-2 mb-6">
-                  {comprovantes.map((c) => (
-                    <LinhaComprovante key={c.id} item={c} />
-                  ))}
-                </div>
-              </>
-            )}
-
             <SecaoTitulo icone={<History size={16} />} texto="Histórico de pontos" />
             <div className="flex flex-col gap-2">
               {historico.length === 0 && <div className="text-center text-terracota py-7 text-[13px]">Nenhuma movimentação ainda.</div>}
@@ -539,31 +480,6 @@ const STATUS_CONFIG = {
   APROVADO: { cor: "text-green-700", bg: "bg-green-50", label: "Aprovado", icone: <Check size={13} /> },
   REJEITADO: { cor: "text-red-700", bg: "bg-red-50", label: "Não aprovado", icone: <X size={13} /> },
 };
-
-function LinhaComprovante({ item }: { item: Comprovante }) {
-  const cfg = STATUS_CONFIG[item.status];
-  return (
-    <div className="bg-white border border-bege rounded-lg px-3.5 py-2.5">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {item.arquivoTipo === "IMAGEM" ? <FileImage size={15} className="text-gray-400" /> : <FileText size={15} className="text-gray-400" />}
-          <div>
-            <div className="text-[13px] font-semibold">{item.descricao || "Comprovante de compra"}</div>
-            <div className="text-[11px] text-terracota">
-              {formatData(item.criadoEm)} · {formatBRL(item.valorInformado)}
-            </div>
-          </div>
-        </div>
-        <div className={`rounded-full px-2.5 py-1 text-[11px] font-bold flex items-center gap-1 whitespace-nowrap ${cfg.bg} ${cfg.cor}`}>
-          {cfg.icone} {cfg.label}
-        </div>
-      </div>
-      {item.status === "REJEITADO" && item.motivoRejeicao && (
-        <div className="text-xs text-red-700 bg-red-50 rounded-md px-2.5 py-1.5 mt-2">Motivo: {item.motivoRejeicao}</div>
-      )}
-    </div>
-  );
-}
 
 function LinhaCashback({ item }: { item: MovimentacaoCashback }) {
   const ehDebito = item.valor < 0;

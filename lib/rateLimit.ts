@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // Rate limiter simples em memória (janela fixa) para rotas sensíveis:
-// login (cliente/admin) e envio de comprovante.
+// login (cliente/admin) e resgate de cashback.
 //
 // Funciona para uma única instância do processo Node. Se o projeto for
 // escalar horizontalmente (múltiplas instâncias/serverless com estado
@@ -57,6 +57,5 @@ export function checarLimite(chave: string, maxTentativas: number, janelaMs: num
 
 export const LIMITES = {
   LOGIN: { max: 5, janelaMs: 15 * 60 * 1000 }, // 5 tentativas / 15 min
-  COMPROVANTE: { max: 10, janelaMs: 60 * 60 * 1000 }, // 10 envios / hora
   RESGATE_CASHBACK: { max: 5, janelaMs: 60 * 60 * 1000 }, // 5 solicitações / hora
 };

@@ -9,7 +9,6 @@ import { prisma } from "@/lib/prisma";
 
 export const MESES_EXPIRACAO_PONTOS = 12;
 export const PONTOS_BONUS_INDICACAO = 100;
-export const LIMITE_COMPROVANTES_PENDENTES = 3;
 
 // Taxa de conversão de pontos em cashback: 100 pontos = R$1,00 (igual para todos os níveis)
 export const TAXA_CONVERSAO_PONTOS_CASHBACK = 0.01;
@@ -72,9 +71,9 @@ export async function buscarCampanhaAtiva(data: Date = new Date()) {
 }
 
 // ---------------------------------------------------------------------------
-// Lançamento de compra (via admin ou via aprovação de comprovante).
-// Calcula multiplicador de nível + campanha, credita pontos e cria o lote
-// com data de expiração (12 meses).
+// Lançamento de compra (hoje, só via importação do relatório diário de
+// vendas — ver lib/importacaoVendas.ts). Calcula multiplicador de nível +
+// campanha, credita pontos e cria o lote com data de expiração (12 meses).
 // ---------------------------------------------------------------------------
 
 // Lançada quando uma venda importada do relatório diário já tinha sido

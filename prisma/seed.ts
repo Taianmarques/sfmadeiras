@@ -103,18 +103,6 @@ async function main() {
   console.log("Seed: registrando um resgate de exemplo...");
   await resgatarRecompensa(carlos.id, recompensas.find((r) => r.nome === "Boné da loja")!.id);
 
-  console.log("Seed: criando comprovante pendente de exemplo...");
-  await prisma.comprovante.create({
-    data: {
-      clienteId: ana.id,
-      valorInformado: 215,
-      descricao: "Cimento e areia (comprovante anexado, sem CPF na nota)",
-      arquivoNome: "nota-fiscal-0231.jpg",
-      arquivoUrl: "/api/uploads/exemplo-seed.jpg",
-      arquivoTipo: "IMAGEM",
-    },
-  });
-
   console.log("Seed: criando campanha de pontos em dobro de exemplo...");
   const inicioCampanha = new Date();
   const fimCampanha = new Date();

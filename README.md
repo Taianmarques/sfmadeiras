@@ -1,6 +1,6 @@
 # Clube de Fidelidade — SF Madeiras
 
-Sistema fullstack de clube de pontos para a SF Madeiras: cadastro e login de clientes por CPF/CNPJ, QR Code pessoal, envio e aprovação de comprovantes de compra, catálogo de recompensas, níveis de fidelidade, campanhas de pontos em dobro, indicação de amigos e painel administrativo completo para a loja.
+Sistema fullstack de clube de pontos para a SF Madeiras: cadastro e login de clientes por CPF/CNPJ, QR Code pessoal, importação em lote do relatório diário de vendas (casando por CNPJ/CPF), catálogo de recompensas com acompanhamento de retirada, níveis de fidelidade, campanhas de pontos em dobro, indicação de amigos e painel administrativo completo para a loja.
 
 ## Stack
 
@@ -8,10 +8,11 @@ Sistema fullstack de clube de pontos para a SF Madeiras: cadastro e login de cli
 - **Backend:** Next.js API Routes
 - **Banco de dados:** [Supabase](https://supabase.com) (PostgreSQL gerenciado) + Prisma ORM
 - **Autenticação:** NextAuth.js (Credentials) — cliente por CPF/CNPJ + senha, admin por e-mail + senha
-- **Upload de comprovantes:** armazenamento local em `/uploads` (fora de `/public`, servido por rota autenticada)
+- **Importação de vendas:** leitura de planilha .xlsx (biblioteca `xlsx`) com prévia antes de confirmar
+- **Upload de fotos de catálogo:** armazenamento local em `/uploads` (fora de `/public`, servido por rota autenticada)
 - **WhatsApp:** stub estruturado em `lib/whatsapp.ts`, pronto para plugar Evolution API ou Z-API
 
-> O projeto usa o Supabase só como Postgres gerenciado (via Prisma) — não usa Supabase Auth nem Supabase Storage. Login continua sendo NextAuth + Prisma, e os comprovantes continuam salvos em `/uploads`.
+> O projeto usa o Supabase só como Postgres gerenciado (via Prisma) — não usa Supabase Auth nem Supabase Storage. Login continua sendo NextAuth + Prisma, e as fotos de catálogo continuam salvas em `/uploads`.
 
 ## Pré-requisitos
 
@@ -69,7 +70,7 @@ Sistema fullstack de clube de pontos para a SF Madeiras: cadastro e login de cli
    Isso cria:
    - Um admin: `admin@sfmadeiras.com.br` / `admin123`
    - 4 clientes de exemplo (Carlos Mendes, Ana Beatriz Souza, Marceneiro João Lima, Construtora Pinheiro), todos com senha `cliente123`
-   - Catálogo de recompensas, histórico de compras, um resgate, um comprovante pendente e uma campanha de pontos em dobro ativa
+   - Catálogo de recompensas, histórico de compras, um resgate e uma campanha de pontos em dobro ativa
 
 7. **Rode o servidor de desenvolvimento**
 
@@ -104,7 +105,7 @@ Sistema fullstack de clube de pontos para a SF Madeiras: cadastro e login de cli
     /auth         → NextAuth + registro de cliente
     /cliente      → rotas usadas pelo app do cliente
     /admin        → rotas usadas pelo painel da loja
-    /uploads      → serve os arquivos de comprovante (autenticado)
+    /uploads      → serve os arquivos de catálogo (autenticado)
     /cron         → expiração de pontos (chamável por cron externo)
 /prisma
   schema.prisma   → modelos do banco
@@ -115,17 +116,18 @@ Sistema fullstack de clube de pontos para a SF Madeiras: cadastro e login de cli
 /lib
   auth.ts         → configuração do NextAuth
   pontos.ts       → regras de negócio: níveis, multiplicadores, cálculo de pontos, expiração
+  importacaoVendas.ts → leitura da planilha do relatório diário de vendas
   whatsapp.ts      → stub de notificações WhatsApp (Evolution API / Z-API)
-  upload.ts        → salvar/servir comprovantes
-  rateLimit.ts      → rate limiting em memória (login e envio de comprovante)
+  upload.ts        → salvar/servir fotos de catálogo
+  rateLimit.ts      → rate limiting em memória (login, resgate de cashback)
   auditoria.ts      → log de auditoria (ação, usuário, IP, timestamp)
-/uploads          → arquivos de comprovante enviados pelos clientes (não versionado)
+/uploads          → fotos de recompensas/ofertas enviadas pelo admin (não versionado)
 middleware.ts     → protege rotas de página e de API por papel (cliente/admin)
 ```
 
 ## Regras de negócio implementadas
 
-- **Pontuação:** R$1 gasto = 1 ponto, multiplicado pelo nível do cliente e, se houver, por uma campanha ativa.
+- **Pontuação:** R$1 gasto = 1 ponto, multiplicado pelo nível do cliente e, se houver, por uma campanha ativa. Os pontos são creditados via importação do relatório diário de vendas (.xlsx), que casa cada venda com o cliente pelo CNPJ/CPF — não existe mais envio de comprovante ou lançamento manual de compra pelo admin.
 - **Níveis** (por total gasto acumulado):
   - Bronze: R$0 – R$999 (1x)
   - Prata: R$1.000 – R$4.999 (1.2x)
@@ -133,14 +135,15 @@ middleware.ts     → protege rotas de página e de API por papel (cliente/admin
   - Diamante: R$15.000+ (2x)
 - **Expiração de pontos:** cada crédito de pontos (compra ou bônus) forma um "lote" com validade de 12 meses a partir da data em que foi ganho. Resgates consomem os lotes mais antigos primeiro (FIFO). Um lote não usado até a data de expiração é baixado automaticamente (rota `POST /api/cron/expirar-pontos`, pensada para ser chamada por um agendador externo com o header `x-cron-secret`, ou manualmente por um admin logado).
 - **Resgate — recompensa ou cashback:** ao juntar pontos, o cliente escolhe entre trocar por um item do catálogo de recompensas ou converter os pontos em saldo de cashback (100 pontos = R$1,00), usado como desconto na próxima compra. O saque do saldo de cashback precisa ser solicitado pelo cliente e aprovado por um admin antes de ser debitado.
+- **Acompanhamento de retirada:** todo resgate de recompensa nasce como "pendente" — a loja confirma a entrega física na aba Retiradas do admin, ou cancela (devolvendo pontos e estoque) se o cliente nunca retirar.
 - **Indicação de amigo:** cada cliente tem um link único (`/cliente/registro?ref=<id>`, reutilizável para quantos amigos quiser). Ao um indicado se cadastrar por esse link, quem indicou ganha 100 pontos de bônus automaticamente.
-- **Limite de comprovantes pendentes:** um cliente não pode ter mais de 3 comprovantes aguardando análise ao mesmo tempo.
-- **Auditoria:** login (cliente/admin), lançamento de compra, aprovação/rejeição de comprovante, resgate e ajustes ficam registrados em `LogAuditoria` com usuário, IP e timestamp.
-- **Rate limiting:** rotas de login (cliente e admin) e de envio de comprovante têm limite de tentativas por IP/cliente numa janela de tempo (implementação em memória — ver nota abaixo).
+- **Importação de vendas:** idempotente por número do pedido — reenviar o mesmo relatório (ou um relatório com dias sobrepostos) nunca credita pontos em dobro.
+- **Auditoria:** login (cliente/admin), importação de vendas, resgate, entrega/cancelamento de resgate e ajustes ficam registrados em `LogAuditoria` com usuário, IP e timestamp.
+- **Rate limiting:** rotas de login (cliente e admin) e de resgate de cashback têm limite de tentativas por IP/cliente numa janela de tempo (implementação em memória — ver nota abaixo).
 
 ## Notas sobre produção
 
 - **Rate limiting:** a implementação atual (`lib/rateLimit.ts`) é em memória, válida para uma única instância do processo Node. Para rodar em múltiplas instâncias/serverless, troque por um armazenamento compartilhado (ex: Upstash Redis) — a assinatura da função foi pensada para isso ser um drop-in.
-- **Upload de comprovantes:** hoje salva em `/uploads` no disco local do servidor. Para trocar por S3 (ou outro storage), basta reimplementar `salvarComprovante` em `lib/upload.ts` mantendo a mesma assinatura, e ajustar a rota `app/api/uploads/[arquivo]/route.ts` para redirecionar/assinar a URL do bucket em vez de ler do disco.
+- **Upload de fotos de catálogo:** hoje salva em `/uploads` no disco local do servidor. Para trocar por S3 (ou outro storage), basta reimplementar `salvarImagemProduto` em `lib/upload.ts` mantendo a mesma assinatura, e ajustar a rota `app/api/uploads/[arquivo]/route.ts` para redirecionar/assinar a URL do bucket em vez de ler do disco.
 - **WhatsApp:** enquanto `WHATSAPP_PROVIDER`, `WHATSAPP_API_URL` e `WHATSAPP_API_KEY` não estiverem preenchidos no `.env`, as notificações apenas fazem `console.info` (não quebram o fluxo). Preencha essas variáveis com uma instância da Evolution API ou da Z-API para ativar o envio real.
 - **Expiração de pontos:** configure um cron externo (Vercel Cron, GitHub Actions agendado, cron do SO) para chamar `POST /api/cron/expirar-pontos` periodicamente (ex: uma vez por dia) com o header `x-cron-secret: <CRON_SECRET>`.
