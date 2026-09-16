@@ -1,4 +1,4 @@
-import { Prisma, NivelFidelidade, OrigemPontos, TipoMovimentacao, TipoMovimentacaoCashback } from "@prisma/client";
+import { Prisma, NivelFidelidade, OrigemPontos, TipoMovimentacao, TipoMovimentacaoCashback, StatusResgate } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 // ---------------------------------------------------------------------------
@@ -282,6 +282,96 @@ export async function resgatarRecompensa(clienteId: string, recompensaId: string
     });
 
     return { resgate, cliente: clienteAtualizado };
+  }, OPCOES_TRANSACAO);
+}
+
+// ---------------------------------------------------------------------------
+// Confirmação de entrega: o admin confirma no balcão que o cliente retirou
+// o brinde. Pontos e estoque já foram debitados no momento do resgate — isso
+// só fecha o acompanhamento.
+// ---------------------------------------------------------------------------
+
+export async function confirmarEntregaResgate(resgateId: string, adminId: string) {
+  const resgate = await prisma.resgate.findUniqueOrThrow({
+    where: { id: resgateId },
+    include: { cliente: true, recompensa: true },
+  });
+  if (resgate.status !== StatusResgate.PENDENTE) {
+    throw new Error("Este resgate já foi finalizado (entregue ou cancelado).");
+  }
+
+  const resgateAtualizado = await prisma.resgate.update({
+    where: { id: resgateId },
+    data: { status: StatusResgate.ENTREGUE, entregueEm: new Date(), entreguePorAdminId: adminId },
+  });
+
+  return { resgate: resgateAtualizado, cliente: resgate.cliente, recompensa: resgate.recompensa };
+}
+
+// ---------------------------------------------------------------------------
+// Cancelamento de resgate: cliente nunca retirou o brinde. Devolve os pontos
+// (como um novo lote, com validade de 12 meses a partir de hoje — os lotes
+// originais consumidos no resgate não são "desconsumidos") e o estoque do
+// item, e marca o resgate como cancelado.
+// ---------------------------------------------------------------------------
+
+export async function cancelarResgate(resgateId: string, adminId: string, motivo?: string) {
+  return prisma.$transaction(async (tx) => {
+    const resgate = await tx.resgate.findUniqueOrThrow({
+      where: { id: resgateId },
+      include: { cliente: true, recompensa: true },
+    });
+    if (resgate.status !== StatusResgate.PENDENTE) {
+      throw new Error("Este resgate já foi finalizado (entregue ou cancelado).");
+    }
+
+    const { cliente, recompensa } = resgate;
+
+    const movimentacao = await tx.movimentacaoPontos.create({
+      data: {
+        clienteId: resgate.clienteId,
+        tipo: TipoMovimentacao.AJUSTE,
+        descricao: `Estorno — resgate cancelado: ${recompensa.nome}`,
+        pontos: resgate.pontosGastos,
+        criadoPorAdminId: adminId,
+      },
+    });
+
+    const dataExpiracao = new Date();
+    dataExpiracao.setMonth(dataExpiracao.getMonth() + MESES_EXPIRACAO_PONTOS);
+
+    await tx.pontosLote.create({
+      data: {
+        clienteId: resgate.clienteId,
+        pontosOriginais: resgate.pontosGastos,
+        pontosRestantes: resgate.pontosGastos,
+        origem: OrigemPontos.AJUSTE,
+        movimentacaoId: movimentacao.id,
+        dataExpiracao,
+      },
+    });
+
+    await tx.cliente.update({
+      where: { id: resgate.clienteId },
+      data: { pontos: { increment: resgate.pontosGastos } },
+    });
+
+    await tx.recompensa.update({
+      where: { id: resgate.recompensaId },
+      data: { estoque: { increment: 1 } },
+    });
+
+    const resgateAtualizado = await tx.resgate.update({
+      where: { id: resgateId },
+      data: {
+        status: StatusResgate.CANCELADO,
+        canceladoEm: new Date(),
+        canceladoPorAdminId: adminId,
+        motivoCancelamento: motivo,
+      },
+    });
+
+    return { resgate: resgateAtualizado, cliente, recompensa };
   }, OPCOES_TRANSACAO);
 }
 

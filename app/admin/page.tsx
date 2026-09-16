@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signOut } from "next-auth/react";
-import { LogOut, Receipt, Plus, Users, Package, BarChart3, Megaphone, Tag, KeyRound, Wallet, FileSpreadsheet } from "lucide-react";
+import { LogOut, Receipt, Plus, Users, Package, BarChart3, Megaphone, Tag, KeyRound, Wallet, FileSpreadsheet, Gift } from "lucide-react";
 import { Toast } from "@/components/Toast";
 import { Logo } from "@/components/Logo";
 import { useToast } from "@/lib/useToast";
@@ -16,6 +16,7 @@ import { AbaOfertas } from "@/components/admin/AbaOfertas";
 import { AbaRelatorios } from "@/components/admin/AbaRelatorios";
 import { AbaCashback } from "@/components/admin/AbaCashback";
 import { AbaImportarVendas } from "@/components/admin/AbaImportarVendas";
+import { AbaRetiradas } from "@/components/admin/AbaRetiradas";
 
 type Aba =
   | "comprovantes"
@@ -23,6 +24,7 @@ type Aba =
   | "importar-vendas"
   | "clientes"
   | "recompensas"
+  | "retiradas"
   | "cashback"
   | "campanhas"
   | "ofertas"
@@ -67,6 +69,7 @@ export default function PainelAdmin() {
           <AbaBotao ativo={aba === "importar-vendas"} onClick={() => setAba("importar-vendas")} icone={<FileSpreadsheet size={15} />} label="Importar vendas" />
           <AbaBotao ativo={aba === "clientes"} onClick={() => setAba("clientes")} icone={<Users size={15} />} label="Clientes" />
           <AbaBotao ativo={aba === "recompensas"} onClick={() => setAba("recompensas")} icone={<Package size={15} />} label="Recompensas" />
+          <AbaBotao ativo={aba === "retiradas"} onClick={() => setAba("retiradas")} icone={<Gift size={15} />} label="Retiradas" />
           <AbaBotao ativo={aba === "cashback"} onClick={() => setAba("cashback")} icone={<Wallet size={15} />} label="Cashback" />
           <AbaBotao ativo={aba === "campanhas"} onClick={() => setAba("campanhas")} icone={<Megaphone size={15} />} label="Campanhas" />
           <AbaBotao ativo={aba === "ofertas"} onClick={() => setAba("ofertas")} icone={<Tag size={15} />} label="Ofertas" />
@@ -78,6 +81,7 @@ export default function PainelAdmin() {
         {aba === "importar-vendas" && <AbaImportarVendas mostrarToast={mostrarToast} />}
         {aba === "clientes" && <AbaClientes />}
         {aba === "recompensas" && <AbaRecompensas mostrarToast={mostrarToast} />}
+        {aba === "retiradas" && <AbaRetiradas mostrarToast={mostrarToast} />}
         {aba === "cashback" && <AbaCashback mostrarToast={mostrarToast} />}
         {aba === "campanhas" && <AbaCampanhas mostrarToast={mostrarToast} />}
         {aba === "ofertas" && <AbaOfertas mostrarToast={mostrarToast} />}

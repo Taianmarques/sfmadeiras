@@ -58,6 +58,12 @@ enum StatusIndicacao {
   CONVERTIDA
 }
 
+enum StatusResgate {
+  PENDENTE // pontos e estoque já debitados, aguardando o cliente retirar na loja
+  ENTREGUE // brinde retirado, confirmado por um admin
+  CANCELADO // cliente nunca retirou — pontos e estoque foram devolvidos
+}
+
 enum TipoUsuarioAuditoria {
   CLIENTE
   ADMIN
@@ -130,6 +136,8 @@ model Admin {
   movimentacoesCashbackLancadas MovimentacaoCashback[] @relation("AdminLancouCashback")
   resgatesCashbackAnalisados    ResgateCashback[]      @relation("AdminAnalisouCashback")
   vendasImportadas              VendaImportada[]       @relation("AdminImportouVenda")
+  resgatesEntregues             Resgate[]              @relation("AdminEntregouResgate")
+  resgatesCancelados            Resgate[]              @relation("AdminCancelouResgate")
 }
 
 // ---------------------------------------------------------------------------
@@ -214,17 +222,28 @@ model Recompensa {
 // ---------------------------------------------------------------------------
 
 model Resgate {
-  id           String     @id @default(cuid())
-  clienteId    String
-  cliente      Cliente    @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-  recompensaId String
-  recompensa   Recompensa @relation(fields: [recompensaId], references: [id])
-  pontosGastos Int
-  criadoEm     DateTime   @default(now())
+  id                 String        @id @default(cuid())
+  clienteId          String
+  cliente            Cliente       @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  recompensaId       String
+  recompensa         Recompensa    @relation(fields: [recompensaId], references: [id])
+  pontosGastos       Int
+  status             StatusResgate @default(PENDENTE)
+  motivoCancelamento String?
+  criadoEm           DateTime      @default(now())
+
+  entregueEm         DateTime?
+  entreguePorAdminId String?
+  entreguePorAdmin   Admin?    @relation("AdminEntregouResgate", fields: [entreguePorAdminId], references: [id])
+
+  canceladoEm         DateTime?
+  canceladoPorAdminId String?
+  canceladoPorAdmin   Admin?    @relation("AdminCancelouResgate", fields: [canceladoPorAdminId], references: [id])
 
   movimentacao MovimentacaoPontos?
 
   @@index([clienteId])
+  @@index([status])
 }
 
 // ---------------------------------------------------------------------------

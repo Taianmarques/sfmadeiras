@@ -98,6 +98,15 @@ interface ResgateCashbackItem {
   criadoEm: string;
 }
 
+interface ResgateRecompensaItem {
+  id: string;
+  pontosGastos: number;
+  status: "PENDENTE" | "ENTREGUE" | "CANCELADO";
+  motivoCancelamento: string | null;
+  criadoEm: string;
+  recompensa: { nome: string; icone: string; imagemUrl: string | null };
+}
+
 type Aba = "inicio" | "recompensas" | "cashback" | "ofertas" | "historico";
 
 export default function ClienteApp() {
@@ -109,6 +118,7 @@ export default function ClienteApp() {
   const [ofertas, setOfertas] = useState<Oferta[]>([]);
   const [extratoCashback, setExtratoCashback] = useState<MovimentacaoCashback[]>([]);
   const [resgatesCashback, setResgatesCashback] = useState<ResgateCashbackItem[]>([]);
+  const [resgatesRecompensa, setResgatesRecompensa] = useState<ResgateRecompensaItem[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [modalComprovanteAberto, setModalComprovanteAberto] = useState(false);
   const [modalQrAberto, setModalQrAberto] = useState(false);
@@ -117,7 +127,7 @@ export default function ClienteApp() {
   const { toast, mostrarToast } = useToast();
 
   const carregarTudo = useCallback(async () => {
-    const [meRes, recRes, histRes, compRes, ofertasRes, cashbackRes, resgatesCashbackRes] = await Promise.all([
+    const [meRes, recRes, histRes, compRes, ofertasRes, cashbackRes, resgatesCashbackRes, resgatesRes] = await Promise.all([
       fetch("/api/cliente/me"),
       fetch("/api/cliente/recompensas"),
       fetch("/api/cliente/historico"),
@@ -125,6 +135,7 @@ export default function ClienteApp() {
       fetch("/api/cliente/ofertas"),
       fetch("/api/cliente/cashback"),
       fetch("/api/cliente/cashback/resgates"),
+      fetch("/api/cliente/resgates"),
     ]);
     if (meRes.ok) setCliente(await meRes.json());
     if (recRes.ok) setRecompensas(await recRes.json());
@@ -133,6 +144,7 @@ export default function ClienteApp() {
     if (ofertasRes.ok) setOfertas(await ofertasRes.json());
     if (cashbackRes.ok) setExtratoCashback((await cashbackRes.json()).extrato);
     if (resgatesCashbackRes.ok) setResgatesCashback(await resgatesCashbackRes.json());
+    if (resgatesRes.ok) setResgatesRecompensa(await resgatesRes.json());
     setCarregando(false);
   }, []);
 
@@ -334,6 +346,17 @@ export default function ClienteApp() {
                 Converter
               </button>
             </div>
+
+            {resgatesRecompensa.length > 0 && (
+              <div className="mt-8">
+                <SecaoTitulo icone={<Gift size={16} />} texto="Meus resgates" />
+                <div className="flex flex-col gap-2">
+                  {resgatesRecompensa.map((r) => (
+                    <LinhaResgateRecompensa key={r.id} item={r} />
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="mt-8">
               <SecaoTitulo icone={<Users size={16} />} texto="Indique um amigo" />
@@ -576,6 +599,37 @@ function LinhaResgateCashback({ item }: { item: ResgateCashbackItem }) {
       </div>
       {item.status === "REJEITADO" && item.motivoRejeicao && (
         <div className="text-xs text-red-700 bg-red-50 rounded-md px-2.5 py-1.5 mt-2">Motivo: {item.motivoRejeicao}</div>
+      )}
+    </div>
+  );
+}
+
+const STATUS_CONFIG_RESGATE = {
+  PENDENTE: { cor: "text-terracota", bg: "bg-[#FBF3DD]", label: "Aguardando retirada", icone: <Clock size={13} /> },
+  ENTREGUE: { cor: "text-green-700", bg: "bg-green-50", label: "Retirado", icone: <Check size={13} /> },
+  CANCELADO: { cor: "text-red-700", bg: "bg-red-50", label: "Cancelado", icone: <X size={13} /> },
+};
+
+function LinhaResgateRecompensa({ item }: { item: ResgateRecompensaItem }) {
+  const cfg = STATUS_CONFIG_RESGATE[item.status];
+  return (
+    <div className="bg-white border border-bege rounded-lg px-3.5 py-2.5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{item.recompensa.icone}</span>
+          <div>
+            <div className="text-[13px] font-semibold">{item.recompensa.nome}</div>
+            <div className="text-[11px] text-terracota">
+              {formatData(item.criadoEm)} · {formatPontos(item.pontosGastos)} pts
+            </div>
+          </div>
+        </div>
+        <div className={`rounded-full px-2.5 py-1 text-[11px] font-bold flex items-center gap-1 whitespace-nowrap ${cfg.bg} ${cfg.cor}`}>
+          {cfg.icone} {cfg.label}
+        </div>
+      </div>
+      {item.status === "CANCELADO" && item.motivoCancelamento && (
+        <div className="text-xs text-red-700 bg-red-50 rounded-md px-2.5 py-1.5 mt-2">Motivo: {item.motivoCancelamento}</div>
       )}
     </div>
   );

@@ -91,6 +91,17 @@ export function notificarResgateConfirmado(telefone: string, nome: string, recom
   );
 }
 
+export function notificarResgateEntregue(telefone: string, nome: string, recompensa: string) {
+  return enviarMensagem(telefone, `${nome}, confirmamos a retirada de "${recompensa}". Aproveite! 🎁`);
+}
+
+export function notificarResgateCancelado(telefone: string, nome: string, recompensa: string) {
+  return enviarMensagem(
+    telefone,
+    `Olá, ${nome}. Seu resgate de "${recompensa}" foi cancelado por falta de retirada e os pontos já voltaram para o seu saldo.`
+  );
+}
+
 export function notificarNivelSubiu(telefone: string, nome: string, novoNivel: string) {
   return enviarMensagem(
     telefone,
