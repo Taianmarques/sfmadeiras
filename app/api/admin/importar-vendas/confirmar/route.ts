@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       const { pontosGanhos } = await registrarCompra({
         clienteId: cliente.id,
         valor: linha.valorVenda,
-        descricao: `Venda importada — Pedido ${linha.pedido} (relatório diário)`,
+        descricao: `Compra — Pedido ${linha.pedido}`,
         criadoPorAdminId: sessao.user.id,
         pedidoExterno: linha.pedido,
       });
