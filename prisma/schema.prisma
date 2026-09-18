@@ -381,6 +381,21 @@ model Campanha {
 }
 
 // ---------------------------------------------------------------------------
+// FAIXA DE NÍVEL (configuração editável pelo admin — aba Configurações)
+// Uma linha por nível, faixa de total gasto (minimo/maximo) e multiplicador
+// de pontos daquele nível. `maximo = null` = sem teto (nível mais alto).
+// ---------------------------------------------------------------------------
+
+model FaixaNivelConfig {
+  id            String          @id @default(cuid())
+  nivel         NivelFidelidade @unique
+  minimo        Decimal         @db.Decimal(12, 2)
+  maximo        Decimal?        @db.Decimal(12, 2)
+  multiplicador Decimal         @db.Decimal(4, 2)
+  atualizadoEm  DateTime        @updatedAt
+}
+
+// ---------------------------------------------------------------------------
 // OFERTA (vitrine de promoções exclusivas do clube, visível a todo cliente
 // logado — puramente informativa, sem cupom/resgate associado)
 // ---------------------------------------------------------------------------

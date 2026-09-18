@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { exigirCliente } from "@/lib/sessao";
 import { prisma } from "@/lib/prisma";
-import { multiplicadorDoNivel, proximaFaixa, TAXA_CONVERSAO_PONTOS_CASHBACK } from "@/lib/pontos";
+import { buscarFaixasNivel, multiplicadorDoNivel, proximaFaixa, TAXA_CONVERSAO_PONTOS_CASHBACK } from "@/lib/pontos";
 
 export async function GET() {
   const { sessao, erro } = await exigirCliente();
@@ -27,13 +27,14 @@ export async function GET() {
   if (!cliente) return NextResponse.json({ erro: "Cliente não encontrado." }, { status: 404 });
 
   const totalGasto = cliente.totalGasto.toNumber();
-  const proxima = proximaFaixa(totalGasto);
+  const faixas = await buscarFaixasNivel();
+  const proxima = proximaFaixa(faixas, totalGasto);
 
   return NextResponse.json({
     ...cliente,
     totalGasto,
     saldoCashback: cliente.saldoCashback.toNumber(),
-    multiplicadorAtual: multiplicadorDoNivel(cliente.nivel),
+    multiplicadorAtual: multiplicadorDoNivel(faixas, cliente.nivel),
     taxaConversaoCashback: TAXA_CONVERSAO_PONTOS_CASHBACK,
     proximoNivel: proxima
       ? { nivel: proxima.nivel, faltamReais: Math.max(proxima.minimo - totalGasto, 0) }

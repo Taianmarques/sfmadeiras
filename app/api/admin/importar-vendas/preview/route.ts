@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { exigirAdmin } from "@/lib/sessao";
 import { prisma } from "@/lib/prisma";
 import { parseRelatorioVendas, RelatorioInvalidoError } from "@/lib/importacaoVendas";
-import { multiplicadorDoNivel, buscarCampanhaAtiva } from "@/lib/pontos";
+import { multiplicadorDoNivel, buscarCampanhaAtiva, buscarFaixasNivel } from "@/lib/pontos";
 
 export async function POST(req: NextRequest) {
   const { erro } = await exigirAdmin();
@@ -31,13 +31,14 @@ export async function POST(req: NextRequest) {
   const pedidosNoArquivo = linhas.map((l) => l.pedido);
   const cpfsNoArquivo = [...new Set(linhas.map((l) => l.cpfCnpj))];
 
-  const [jaImportadas, clientes, campanha] = await Promise.all([
+  const [jaImportadas, clientes, campanha, faixas] = await Promise.all([
     prisma.vendaImportada.findMany({
       where: { pedidoExterno: { in: pedidosNoArquivo } },
       select: { pedidoExterno: true },
     }),
     prisma.cliente.findMany({ where: { cpfCnpj: { in: cpfsNoArquivo } } }),
     buscarCampanhaAtiva(),
+    buscarFaixasNivel(),
   ]);
 
   const pedidosJaImportados = new Set(jaImportadas.map((v) => v.pedidoExterno));
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
     if (!cliente) {
       return { ...linha, status: "cliente_nao_encontrado" as const };
     }
-    const pontosEstimados = Math.round(linha.valorVenda * multiplicadorDoNivel(cliente.nivel) * multCampanha);
+    const pontosEstimados = Math.round(linha.valorVenda * multiplicadorDoNivel(faixas, cliente.nivel) * multCampanha);
     return {
       ...linha,
       status: "ok" as const,

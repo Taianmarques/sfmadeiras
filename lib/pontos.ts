@@ -13,36 +13,41 @@ export const PONTOS_BONUS_INDICACAO = 100;
 // Taxa de conversão de pontos em cashback: 100 pontos = R$1,00 (igual para todos os níveis)
 export const TAXA_CONVERSAO_PONTOS_CASHBACK = 0.01;
 
-interface FaixaNivel {
+export interface FaixaNivel {
   nivel: NivelFidelidade;
   minimo: number; // total gasto mínimo (inclusive)
   maximo: number | null; // total gasto máximo (inclusive), null = sem teto
   multiplicador: number;
 }
 
-export const FAIXAS_NIVEL: FaixaNivel[] = [
-  { nivel: "BRONZE", minimo: 0, maximo: 999.99, multiplicador: 1 },
-  { nivel: "PRATA", minimo: 1000, maximo: 4999.99, multiplicador: 1.2 },
-  { nivel: "OURO", minimo: 5000, maximo: 14999.99, multiplicador: 1.5 },
-  { nivel: "DIAMANTE", minimo: 15000, maximo: null, multiplicador: 2 },
-];
+type ClienteBancoOuTx = typeof prisma | Prisma.TransactionClient;
 
-export function calcularNivel(totalGasto: number): NivelFidelidade {
+// Configurável pelo admin (aba Configurações) — lê sempre do banco, nunca
+// cacheia em memória, pra uma mudança valer imediatamente pra todo mundo.
+export async function buscarFaixasNivel(db: ClienteBancoOuTx = prisma): Promise<FaixaNivel[]> {
+  const registros = await db.faixaNivelConfig.findMany({ orderBy: { minimo: "asc" } });
+  return registros.map((r) => ({
+    nivel: r.nivel,
+    minimo: r.minimo.toNumber(),
+    maximo: r.maximo ? r.maximo.toNumber() : null,
+    multiplicador: r.multiplicador.toNumber(),
+  }));
+}
+
+export function calcularNivel(faixas: FaixaNivel[], totalGasto: number): NivelFidelidade {
   const faixa =
-    FAIXAS_NIVEL.find(
-      (f) => totalGasto >= f.minimo && (f.maximo === null || totalGasto <= f.maximo)
-    ) ?? FAIXAS_NIVEL[0];
+    faixas.find((f) => totalGasto >= f.minimo && (f.maximo === null || totalGasto <= f.maximo)) ?? faixas[0];
   return faixa.nivel;
 }
 
-export function multiplicadorDoNivel(nivel: NivelFidelidade): number {
-  return FAIXAS_NIVEL.find((f) => f.nivel === nivel)?.multiplicador ?? 1;
+export function multiplicadorDoNivel(faixas: FaixaNivel[], nivel: NivelFidelidade): number {
+  return faixas.find((f) => f.nivel === nivel)?.multiplicador ?? 1;
 }
 
-export function proximaFaixa(totalGasto: number): FaixaNivel | null {
-  const atual = calcularNivel(totalGasto);
-  const idx = FAIXAS_NIVEL.findIndex((f) => f.nivel === atual);
-  return FAIXAS_NIVEL[idx + 1] ?? null;
+export function proximaFaixa(faixas: FaixaNivel[], totalGasto: number): FaixaNivel | null {
+  const atual = calcularNivel(faixas, totalGasto);
+  const idx = faixas.findIndex((f) => f.nivel === atual);
+  return faixas[idx + 1] ?? null;
 }
 
 function toNumber(v: Prisma.Decimal | number): number {
@@ -103,11 +108,14 @@ export async function registrarCompra(params: RegistrarCompraParams) {
       if (jaImportada) throw new VendaJaImportadaError(`Pedido ${pedidoExterno} já foi importado anteriormente.`);
     }
 
-    const cliente = await tx.cliente.findUniqueOrThrow({ where: { id: clienteId } });
+    const [cliente, faixas] = await Promise.all([
+      tx.cliente.findUniqueOrThrow({ where: { id: clienteId } }),
+      buscarFaixasNivel(tx),
+    ]);
 
     const totalGastoAtual = toNumber(cliente.totalGasto);
-    const nivelAtual = calcularNivel(totalGastoAtual);
-    const multNivel = multiplicadorDoNivel(nivelAtual);
+    const nivelAtual = calcularNivel(faixas, totalGastoAtual);
+    const multNivel = multiplicadorDoNivel(faixas, nivelAtual);
 
     const agora = new Date();
     const campanha = await tx.campanha.findFirst({
@@ -120,7 +128,7 @@ export async function registrarCompra(params: RegistrarCompraParams) {
     const pontosGanhos = Math.round(valor * multiplicadorTotal);
 
     const novoTotalGasto = totalGastoAtual + valor;
-    const novoNivel = calcularNivel(novoTotalGasto);
+    const novoNivel = calcularNivel(faixas, novoTotalGasto);
 
     const movimentacao = await tx.movimentacaoPontos.create({
       data: {

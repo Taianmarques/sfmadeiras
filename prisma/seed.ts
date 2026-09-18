@@ -26,6 +26,20 @@ async function main() {
     },
   });
 
+  console.log("Seed: configurando faixas de nível padrão...");
+  for (const faixa of [
+    { nivel: "BRONZE" as const, minimo: 0, maximo: 999.99, multiplicador: 1 },
+    { nivel: "PRATA" as const, minimo: 1000, maximo: 4999.99, multiplicador: 1.2 },
+    { nivel: "OURO" as const, minimo: 5000, maximo: 14999.99, multiplicador: 1.5 },
+    { nivel: "DIAMANTE" as const, minimo: 15000, maximo: null, multiplicador: 2 },
+  ]) {
+    await prisma.faixaNivelConfig.upsert({
+      where: { nivel: faixa.nivel },
+      create: faixa,
+      update: faixa,
+    });
+  }
+
   console.log("Seed: criando recompensas...");
   const recompensas = await Promise.all(
     [

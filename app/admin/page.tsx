@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signOut } from "next-auth/react";
-import { LogOut, Users, Package, BarChart3, Megaphone, Tag, KeyRound, Wallet, FileSpreadsheet, Gift } from "lucide-react";
+import { LogOut, Users, Package, BarChart3, Megaphone, Tag, KeyRound, Wallet, FileSpreadsheet, Gift, Settings } from "lucide-react";
 import { Toast } from "@/components/Toast";
 import { Logo } from "@/components/Logo";
 import { useToast } from "@/lib/useToast";
@@ -15,6 +15,7 @@ import { AbaRelatorios } from "@/components/admin/AbaRelatorios";
 import { AbaCashback } from "@/components/admin/AbaCashback";
 import { AbaImportarVendas } from "@/components/admin/AbaImportarVendas";
 import { AbaRetiradas } from "@/components/admin/AbaRetiradas";
+import { AbaConfiguracoes } from "@/components/admin/AbaConfiguracoes";
 
 type Aba =
   | "importar-vendas"
@@ -24,7 +25,8 @@ type Aba =
   | "cashback"
   | "campanhas"
   | "ofertas"
-  | "relatorios";
+  | "relatorios"
+  | "configuracoes";
 
 export default function PainelAdmin() {
   const [aba, setAba] = useState<Aba>("importar-vendas");
@@ -68,6 +70,7 @@ export default function PainelAdmin() {
           <AbaBotao ativo={aba === "campanhas"} onClick={() => setAba("campanhas")} icone={<Megaphone size={15} />} label="Campanhas" />
           <AbaBotao ativo={aba === "ofertas"} onClick={() => setAba("ofertas")} icone={<Tag size={15} />} label="Ofertas" />
           <AbaBotao ativo={aba === "relatorios"} onClick={() => setAba("relatorios")} icone={<BarChart3 size={15} />} label="Relatórios" />
+          <AbaBotao ativo={aba === "configuracoes"} onClick={() => setAba("configuracoes")} icone={<Settings size={15} />} label="Configurações" />
         </div>
 
         {aba === "importar-vendas" && <AbaImportarVendas mostrarToast={mostrarToast} />}
@@ -78,6 +81,7 @@ export default function PainelAdmin() {
         {aba === "campanhas" && <AbaCampanhas mostrarToast={mostrarToast} />}
         {aba === "ofertas" && <AbaOfertas mostrarToast={mostrarToast} />}
         {aba === "relatorios" && <AbaRelatorios />}
+        {aba === "configuracoes" && <AbaConfiguracoes mostrarToast={mostrarToast} />}
       </div>
     </div>
   );

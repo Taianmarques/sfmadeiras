@@ -128,7 +128,7 @@ middleware.ts     → protege rotas de página e de API por papel (cliente/admin
 ## Regras de negócio implementadas
 
 - **Pontuação:** R$1 gasto = 1 ponto, multiplicado pelo nível do cliente e, se houver, por uma campanha ativa. Os pontos são creditados via importação do relatório diário de vendas (.xlsx), que casa cada venda com o cliente pelo CNPJ/CPF — não existe mais envio de comprovante ou lançamento manual de compra pelo admin.
-- **Níveis** (por total gasto acumulado):
+- **Níveis** (por total gasto acumulado) — configuráveis pelo admin na aba Configurações, sem precisar de deploy (valores padrão de fábrica):
   - Bronze: R$0 – R$999 (1x)
   - Prata: R$1.000 – R$4.999 (1.2x)
   - Ouro: R$5.000 – R$14.999 (1.5x)
