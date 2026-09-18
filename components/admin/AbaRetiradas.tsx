@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, X, Gift } from "lucide-react";
+import { Check, X, Gift, QrCode } from "lucide-react";
 import { formatPontos, formatData } from "@/lib/formatadores";
+import { LeitorQrCode } from "@/components/admin/LeitorQrCode";
 import type { ToastState } from "@/components/Toast";
 
 interface ResgateItem {
@@ -20,6 +21,8 @@ export function AbaRetiradas({ mostrarToast }: { mostrarToast: (tipo: ToastState
   const [cancelando, setCancelando] = useState<ResgateItem | null>(null);
   const [motivo, setMotivo] = useState("");
   const [carregando, setCarregando] = useState(true);
+  const [leitorAberto, setLeitorAberto] = useState(false);
+  const [resgateEscaneado, setResgateEscaneado] = useState<ResgateItem | null>(null);
 
   const carregar = async () => {
     const resposta = await fetch("/api/admin/resgates");
@@ -42,7 +45,30 @@ export function AbaRetiradas({ mostrarToast }: { mostrarToast: (tipo: ToastState
       return;
     }
     mostrarToast("sucesso", "Entrega confirmada!");
+    setResgateEscaneado(null);
     carregar();
+  };
+
+  const lerQrCode = async (codigo: string) => {
+    setLeitorAberto(false);
+
+    const resposta = await fetch("/api/admin/resgates");
+    const lista: ResgateItem[] = resposta.ok ? await resposta.json() : resgates;
+    if (resposta.ok) setResgates(lista);
+
+    const encontrado = lista.find((r) => r.id === codigo.trim());
+    if (!encontrado) {
+      mostrarToast("erro", "QR Code não reconhecido. Confira se é o código do resgate.");
+      return;
+    }
+    if (encontrado.status !== "PENDENTE") {
+      mostrarToast(
+        "erro",
+        `Este resgate já foi ${encontrado.status === "ENTREGUE" ? "entregue" : "cancelado"}.`
+      );
+      return;
+    }
+    setResgateEscaneado(encontrado);
   };
 
   const confirmarCancelamento = async () => {
@@ -60,6 +86,7 @@ export function AbaRetiradas({ mostrarToast }: { mostrarToast: (tipo: ToastState
     mostrarToast("sucesso", "Resgate cancelado e pontos devolvidos ao cliente.");
     setCancelando(null);
     setMotivo("");
+    setResgateEscaneado(null);
     carregar();
   };
 
@@ -67,9 +94,19 @@ export function AbaRetiradas({ mostrarToast }: { mostrarToast: (tipo: ToastState
 
   return (
     <div>
-      <h3 className="font-oswald font-semibold text-[13px] tracking-wide uppercase text-terracota mb-3">
-        Retiradas pendentes ({pendentes.length})
-      </h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-oswald font-semibold text-[13px] tracking-wide uppercase text-terracota">
+          Retiradas pendentes ({pendentes.length})
+        </h3>
+        <button
+          onClick={() => setLeitorAberto(true)}
+          className="flex items-center gap-1.5 text-xs font-bold text-terracota border border-terracota rounded-md px-2.5 py-1.5 whitespace-nowrap"
+        >
+          <QrCode size={14} /> Ler QR Code
+        </button>
+      </div>
+
+      {leitorAberto && <LeitorQrCode onLido={lerQrCode} onClose={() => setLeitorAberto(false)} />}
 
       {pendentes.length === 0 && (
         <div className="text-center text-terracota py-10 text-[13px] bg-white border border-bege rounded-[10px]">
@@ -135,6 +172,47 @@ export function AbaRetiradas({ mostrarToast }: { mostrarToast: (tipo: ToastState
             ))}
           </div>
         </>
+      )}
+
+      {resgateEscaneado && (
+        <div
+          className="fixed inset-0 bg-madeira/70 flex items-center justify-center z-[100] p-5"
+          onClick={() => setResgateEscaneado(null)}
+        >
+          <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-xl p-5 max-w-[420px] w-full">
+            <div className="flex items-center gap-2 text-green-700 font-bold text-xs mb-3">
+              <QrCode size={14} /> QR Code reconhecido
+            </div>
+            <div className="w-12 h-12 rounded-lg bg-fundo flex items-center justify-center mb-3 overflow-hidden">
+              {resgateEscaneado.recompensa.imagemUrl ? (
+                <img src={resgateEscaneado.recompensa.imagemUrl} alt={resgateEscaneado.recompensa.nome} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-xl">{resgateEscaneado.recompensa.icone}</span>
+              )}
+            </div>
+            <div className="font-bold font-oswald mb-1">{resgateEscaneado.cliente.nome}</div>
+            <div className="text-xs text-terracota mb-4">
+              {resgateEscaneado.recompensa.nome} · {formatPontos(resgateEscaneado.pontosGastos)} pts
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => confirmarEntrega(resgateEscaneado.id)}
+                className="flex-1 bg-green-700 text-white rounded-lg px-3 py-2.5 text-xs font-bold flex items-center justify-center gap-1.5"
+              >
+                <Check size={13} /> Confirmar entrega
+              </button>
+              <button
+                onClick={() => {
+                  setCancelando(resgateEscaneado);
+                  setResgateEscaneado(null);
+                }}
+                className="border border-red-700 text-red-700 rounded-lg px-3 py-2.5 text-xs font-bold flex items-center justify-center gap-1.5"
+              >
+                <X size={13} /> Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {cancelando && (

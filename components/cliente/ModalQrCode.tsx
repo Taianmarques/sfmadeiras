@@ -13,7 +13,7 @@ export function ModalQrCode({ token, nome, onClose }: { token: string; nome: str
           </button>
         </div>
         <h2 className="font-oswald font-bold text-base mb-1">Meu QR Code</h2>
-        <p className="text-xs text-terracota mb-4">Apresente no caixa para lançar seus pontos</p>
+        <p className="text-xs text-terracota mb-4">Apresente na loja pra se identificar como cliente do clube</p>
         <div className="flex justify-center bg-fundo rounded-xl p-4 mb-3">
           <QRCodeSVG value={token} size={200} fgColor="#1C1410" bgColor="#F7F4ED" />
         </div>

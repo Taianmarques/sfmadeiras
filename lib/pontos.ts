@@ -258,6 +258,7 @@ export async function resgatarRecompensa(clienteId: string, recompensaId: string
 
     const resgate = await tx.resgate.create({
       data: { clienteId, recompensaId, pontosGastos: recompensa.pontos },
+      include: { recompensa: true },
     });
 
     await tx.movimentacaoPontos.create({

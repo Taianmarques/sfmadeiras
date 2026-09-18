@@ -20,6 +20,7 @@ import { Logo } from "@/components/Logo";
 import { Toast } from "@/components/Toast";
 import { useToast } from "@/lib/useToast";
 import { ModalQrCode } from "@/components/cliente/ModalQrCode";
+import { ModalQrResgate } from "@/components/cliente/ModalQrResgate";
 import { ModalSolicitarCashback } from "@/components/cliente/ModalSolicitarCashback";
 import { ModalConverterCashback } from "@/components/cliente/ModalConverterCashback";
 import { formatBRL, formatPontos, formatData } from "@/lib/formatadores";
@@ -106,6 +107,7 @@ export default function ClienteApp() {
   const [resgatesRecompensa, setResgatesRecompensa] = useState<ResgateRecompensaItem[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [modalQrAberto, setModalQrAberto] = useState(false);
+  const [resgateParaQr, setResgateParaQr] = useState<ResgateRecompensaItem | null>(null);
   const [modalCashbackAberto, setModalCashbackAberto] = useState(false);
   const [modalConverterAberto, setModalConverterAberto] = useState(false);
   const { toast, mostrarToast } = useToast();
@@ -141,6 +143,8 @@ export default function ClienteApp() {
   const proximaRecompensa = [...recompensas].filter((r) => r.pontos > cliente.pontos).sort((a, b) => a.pontos - b.pontos)[0]
     ?? [...recompensas].sort((a, b) => b.pontos - a.pontos)[0];
 
+  const resgatesPendentes = resgatesRecompensa.filter((r) => r.status === "PENDENTE");
+
   const tentarResgatar = async (recompensa: Recompensa) => {
     if (cliente.pontos < recompensa.pontos) {
       mostrarToast("erro", `Faltam ${formatPontos(recompensa.pontos - cliente.pontos)} pontos para esse item.`);
@@ -157,6 +161,7 @@ export default function ClienteApp() {
       return;
     }
     mostrarToast("sucesso", `Resgate confirmado: ${recompensa.nome}`);
+    setResgateParaQr(dados.resgate);
     carregarTudo();
   };
 
@@ -175,6 +180,7 @@ export default function ClienteApp() {
       </header>
 
       {modalQrAberto && <ModalQrCode token={cliente.qrCodeToken} nome={cliente.nome} onClose={() => setModalQrAberto(false)} />}
+      {resgateParaQr && <ModalQrResgate resgate={resgateParaQr} onClose={() => setResgateParaQr(null)} />}
       {modalConverterAberto && (
         <ModalConverterCashback
           pontosDisponiveis={cliente.pontos}
@@ -216,6 +222,23 @@ export default function ClienteApp() {
                 NÍVEL {cliente.nivel}
               </span>
             </div>
+
+            {resgatesPendentes.length > 0 && (
+              <button
+                onClick={() => (resgatesPendentes.length === 1 ? setResgateParaQr(resgatesPendentes[0]) : setAba("recompensas"))}
+                className="w-full bg-[#FBF3DD] border border-ambar rounded-[10px] px-4 py-3.5 mb-5 flex items-center gap-3 text-left"
+              >
+                <span className="text-[28px]">{resgatesPendentes[0].recompensa.icone}</span>
+                <div className="flex-1">
+                  <div className="font-semibold text-sm">
+                    {resgatesPendentes.length === 1
+                      ? `${resgatesPendentes[0].recompensa.nome} pronto pra retirada!`
+                      : `Você tem ${resgatesPendentes.length} prêmios prontos pra retirada!`}
+                  </div>
+                  <div className="text-xs text-terracota">Toque aqui pra ver o QR Code e retirar na loja</div>
+                </div>
+              </button>
+            )}
 
             {proximaRecompensa && (
               <div className="bg-white border border-bege rounded-[10px] px-4 py-3.5 mb-5 flex items-center gap-3">
@@ -304,7 +327,7 @@ export default function ClienteApp() {
                 <SecaoTitulo icone={<Gift size={16} />} texto="Meus resgates" />
                 <div className="flex flex-col gap-2">
                   {resgatesRecompensa.map((r) => (
-                    <LinhaResgateRecompensa key={r.id} item={r} />
+                    <LinhaResgateRecompensa key={r.id} item={r} onVerQr={() => setResgateParaQr(r)} />
                   ))}
                 </div>
               </div>
@@ -526,7 +549,7 @@ const STATUS_CONFIG_RESGATE = {
   CANCELADO: { cor: "text-red-700", bg: "bg-red-50", label: "Cancelado", icone: <X size={13} /> },
 };
 
-function LinhaResgateRecompensa({ item }: { item: ResgateRecompensaItem }) {
+function LinhaResgateRecompensa({ item, onVerQr }: { item: ResgateRecompensaItem; onVerQr: () => void }) {
   const cfg = STATUS_CONFIG_RESGATE[item.status];
   return (
     <div className="bg-white border border-bege rounded-lg px-3.5 py-2.5">
@@ -544,6 +567,17 @@ function LinhaResgateRecompensa({ item }: { item: ResgateRecompensaItem }) {
           {cfg.icone} {cfg.label}
         </div>
       </div>
+      {item.status === "PENDENTE" && (
+        <div className="mt-2.5 pt-2.5 border-t border-fundo flex items-center justify-between gap-2">
+          <p className="text-[11px] text-terracota leading-snug">Mostre o QR Code no caixa da loja pra retirar.</p>
+          <button
+            onClick={onVerQr}
+            className="shrink-0 bg-ambar text-madeira font-bold text-[11px] rounded-md px-2.5 py-1.5 whitespace-nowrap"
+          >
+            Ver QR Code
+          </button>
+        </div>
+      )}
       {item.status === "CANCELADO" && item.motivoCancelamento && (
         <div className="text-xs text-red-700 bg-red-50 rounded-md px-2.5 py-1.5 mt-2">Motivo: {item.motivoCancelamento}</div>
       )}

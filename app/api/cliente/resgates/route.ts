@@ -44,10 +44,7 @@ export async function POST(req: NextRequest) {
       detalhes: { recompensaId: validado.data.recompensaId, pontosGastos: resgate.pontosGastos },
     });
 
-    const recompensa = await prisma.recompensa.findUnique({ where: { id: validado.data.recompensaId } });
-    if (recompensa) {
-      notificarResgateConfirmado(cliente.telefone, cliente.nome, recompensa.nome).catch(() => {});
-    }
+    notificarResgateConfirmado(cliente.telefone, cliente.nome, resgate.recompensa.nome).catch(() => {});
 
     return NextResponse.json({ ok: true, resgate, pontosRestantes: cliente.pontos });
   } catch (e) {
